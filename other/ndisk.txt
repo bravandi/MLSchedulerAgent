@@ -1,0 +1,7 @@
+https://www-03.ibm.com/support/techdocs/atsmastr.nsf/WebIndex/PRS5304
+
+if the files are already created and you want to have a sequential read workload
+
+/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/e48b41a6-c181-42eb-9b48-e04bcff02289/F000 -t 3600 -C 500M
+
+

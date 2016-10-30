@@ -1,0 +1,9 @@
+/root/fio-2.0.9/fio --randrepeat=1 --ioengine=libaio --direct=1 --gtod_reduce=1 --name=test --directory=/media/volume1/ --filename=test_filename1 --bs=4k --iodepth=64 --size=256m --readwrite=randrw --rwmixread=75
+
+
+/root/fio-2.0.9/fio --randrepeat=1 --ioengine=libaio --direct=1 --gtod_reduce=1 --name=test --directory=/media/volume1/ --filename=test_filename2 --bs=4k --iodepth=64 --size=256m --readwrite=randrw --rwmixread=75
+
+
+/root/fio-2.0.9/fio --randrepeat=1 --ioengine=libaio --direct=1 --gtod_reduce=1 --name=test --directory=/media/volume1/ --filename=test_filename3 --bs=4k --iodepth=64 --size=256m --readwrite=randrw --rwmixread=75
+
+

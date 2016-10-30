@@ -2,17 +2,69 @@
 
 import subprocess
 import tools
+import os
+import threading
+from datetime import datetime
+import time
+
+
+class FIOTest(threading.Thread):
+    """
+
+    """
+
+    def __init__(self, fio_bin_path, test_path, volume_path):
+        """
+
+        :param fio_bin_path:
+        :param test_path:
+        :param volume_path:
+        :return: IOPS{read, write}
+        :return: test duration (float)
+        :return: test console output
+        """
+        threading.Thread.__init__(self)
+        self.fio_bin_path = fio_bin_path
+        self.test_path = test_path
+        self.volume_path = volume_path
+
+    def run(self):
+        start = datetime.now()
+        print "start time: " + str(start)
+
+        out, err = tools.run_command([self.fio_bin_path, self.test_path], debug=False)
+
+        end = datetime.now()
+
+        out_file = open(self.volume_path + end.strftime("%m-%d-%Y_%H-%M-%S.%f"), 'w')
+
+        difference = (end - start)
+
+        IOPS = {}
+
+        for line in tools.grep(out, "iops"):
+            start = line.index("iops=") + 5
+            IOPS[line[2:line.index(":")]] = line[start:line.index(",", start, len(line))]
+
+        out = out + "\nduration: " + str(difference.total_seconds())
+
+        out_file.write(out)
+
+        out_file.close()
+
+        print out
+        # return IOPS, difference.total_seconds(), out
+
 
 class PerformanceEvaluation():
 
+    fio_bin_path = "/root/fio-2.0.9/fio"
 
-    fio_path = "/root/fio-2.0.9/fio"
-
-    fio_test_path = "/root/MLSchedulerAgent/fio/"
+    fio_tests_conf_path = "/root/MLSchedulerAgent/fio/"
 
     fio_test_name = 'basic.fio'
 
-    volume_path = '/media/volume1/'
+    mount_base_path = '/media/'
 
     current_vm_id = '2aac4553-7feb-4326-9028-bf923c3c88c3'
 
@@ -22,81 +74,75 @@ class PerformanceEvaluation():
 
         pass
 
-    def run_fio_test(self):
+    def fio_test(self, volume_id, test_name):
 
-        with open(self.fio_test_path + self.fio_test_name, 'r') as myfile:
+        volume_path = "%s%s/" % (self.mount_base_path, volume_id)
 
+        test_path = volume_path + test_name
+
+        with open(self.fio_tests_conf_path + test_name, 'r') as myfile:
             data = myfile.read().split('\n')
 
-            data[1] = "directory=" + self.volume_path
+            data[1] = "directory=" + volume_path
 
-            thefile = open(self.volume_path + self.fio_test_name, 'w')
+            volume_test_file = open(test_path, 'w')
 
             for item in data:
+                volume_test_file.write("%s\n" % item)
 
-                thefile.write("%s\n" % item)
+            volume_test_file.close()
 
-            thefile.close()
+        f_test = FIOTest(fio_bin_path=self.fio_bin_path,
+                         test_path=test_path,
+                         volume_path=volume_path)
+        f_test.start()
 
-            p = subprocess.Popen(['/root/fio-2.0.9/fio', '/media/volume1/basic.fio'],
-                                 # [fio_path, volume_path + fio_test_name],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
+    def run_fio_test(self):
+        for volume_id in os.walk(p.mount_base_path).next()[1]:
 
-        out, err = p.communicate()
-
-        print out
+            self.fio_test(volume_id=volume_id,
+                          test_name=self.fio_test_name)
 
     def report_available_iops(self):
 
         pass
 
-#directory=/media/volume1/
-
-#/root/fio-2.0.9/fio /root/MLSchedulerAgent/fio/basic.fio --directory=/media/volume1/
-
-# nova volume-attach 2aac4553-7feb-4326-9028-bf923c3c88c3 4233f033-6118-4abb-b5fe-4973c0aafd70
-
-# mkdir /media/volume2
-# sudo mkfs -t ext3 /dev/vdc
-# mount /dev/vdc /media/volume2
-
 if __name__ == "__main__":
 
-    p = PerformanceEvaluation
+    p = PerformanceEvaluation()
 
     # p.run_fio_test()
 
-    id = tools.grep_d(
-"""
-+--------------------------------+--------------------------------------+
-| Property                       | Value                                |
-+--------------------------------+--------------------------------------+
-| attachments                    | []                                   |
-| availability_zone              | nova                                 |
-| bootable                       | false                                |
-| consistencygroup_id            | None                                 |
-| created_at                     | 2016-10-20T14:33:33.000000           |
-| description                    | None                                 |
-| encrypted                      | False                                |
-| id                             | 4233f033-6118-4abb-b5fe-4973c0aafd70 |
-| metadata                       | {}                                   |
-| migration_status               | None                                 |
-| multiattach                    | False                                |
-| name                           | vol2                                 |
-| os-vol-host-attr:host          | None                                 |
-| os-vol-mig-status-attr:migstat | None                                 |
-| os-vol-mig-status-attr:name_id | None                                 |
-| os-vol-tenant-attr:tenant_id   | 666da5edb7dd4ac1a642a1fdd0f0f8f0     |
-| replication_status             | disabled                             |
-| size                           | 1                                    |
-| snapshot_id                    | None                                 |
-| source_volid                   | None                                 |
-| status                         | creating                             |
-| updated_at                     | None                                 |
-| user_id                        | 275716005ea14ce8a8e1c4a7c05c6ccc     |
-| volume_type                    | None                                 |
-+--------------------------------+--------------------------------------+
-""", "id")
+    z = """
+job1: (g=0): rw=randrw, bs=4K-4K/4K-4K, ioengine=libaio, iodepth=64
+fio-2.0.9
+Starting 1 process
 
-    print(id)
+job1: (groupid=0, jobs=1): err= 0: pid=4614: Sat Oct 29 17:19:28 2016
+  read : io=98676KB, bw=103979KB/s, iops=25994 , runt=   949msec
+  write: io=32396KB, bw=34137KB/s, iops=8534 , runt=   949msec
+  cpu          : usr=8.86%, sys=59.07%, ctx=4489, majf=0, minf=5
+  IO depths    : 1=0.1%, 2=0.1%, 4=0.1%, 8=0.1%, 16=0.1%, 32=0.1%, >=64=99.8%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.1%, >=64=0.0%
+     issued    : total=r=24669/w=8099/d=0, short=r=0/w=0/d=0
+
+Run status group 0 (all jobs):
+   READ: io=98676KB, aggrb=103978KB/s, minb=103978KB/s, maxb=103978KB/s, mint=949msec, maxt=949msec
+  WRITE: io=32396KB, aggrb=34136KB/s, minb=34136KB/s, maxb=34136KB/s, mint=949msec, maxt=949msec
+
+Disk stats (read/write):
+  vdb: ios=23390/7699, merge=0/0, ticks=37236/14632, in_queue=51856, util=90.00%
+
+duration: 1.268539
+    """
+    IOPS = {}
+
+    print len(z)
+
+    for line in tools.grep(z, "iops"):
+
+        start = line.index("iops=") + 5
+        IOPS[line[2:line.index(":")]] = line[start:line.index(",", start, len(line))]
+
+

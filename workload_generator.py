@@ -1,10 +1,38 @@
 import tools
 import time
 import sys
+import threading
 
 import pdb
 
-class WorkloadGenerator():
+
+class StorageWorkloadGenerator (threading.Thread):
+    """
+
+    """
+    def __init__(self, volume_id, workload_type, delay_between_simulator = 1):
+        """
+
+        :param workload_type:
+        :param delay_between_simulator:
+        :return:
+        """
+
+        threading.Thread.__init__(self)
+        self.volume_id = volume_id
+        self.workload_type = workload_type
+        self.delay_between_simulator = delay_between_simulator
+
+    def run(self):
+
+        while True:
+
+            tools.run_command2("/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 500M" % self.volume_id, debug=True)
+
+            time.sleep(self.delay_between_simulator)
+
+
+class BlockWorkloadGenerator():
 
     current_columes = []
 
@@ -12,7 +40,15 @@ class WorkloadGenerator():
 
     def __init__(self):
 
-        pass
+        self.storage_workload_generator_instances = []
+
+    def run_storage_workload_generator(self, volume_id):
+
+        generator = StorageWorkloadGenerator(volume_id=volume_id, workload_type="")
+
+        self.storage_workload_generator_instances.append(generator)
+
+        generator.start()
 
     def create_volume(self):
         '''
@@ -83,7 +119,13 @@ class WorkloadGenerator():
 
         # todo instead of 3 seconds
 
-    def detach_delete_all_volumes(self):
+    def detach_delete_all_volumes(self, mount_path = "/media/"):
+        """
+
+        :param mount_path: must end with /
+        :return:
+        """
+
         print("detach_delete_all_volumes()")
 
         cinder = tools.get_cinder_client()
@@ -124,6 +166,10 @@ class WorkloadGenerator():
 
                 if vol_reload.status == 'available':
                     cinder.volumes.delete(volume.id)
+
+                    # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
+                    tools.run_command(["rm", "-d", "-r", mount_path + volume.id])
+
                     volumes.remove(volume)
 
     def remove_all_available_volumes(self):
@@ -137,15 +183,15 @@ class WorkloadGenerator():
 
 if __name__ == "__main__":
 
-    wg = WorkloadGenerator()
+    wg = BlockWorkloadGenerator()
 
-    if("det-del" in sys.argv):
+    if "det-del" in sys.argv:
         wg.detach_delete_all_volumes()
 
-    elif ("del-avail" in sys.argv):
+    elif "del-avail" in sys.argv:
         wg.remove_all_available_volumes()
 
-    else:
+    elif "add-vol" in sys.argv:
 
         volume = wg.create_volume()
 
@@ -156,3 +202,8 @@ if __name__ == "__main__":
         # device_attached = "/dev/vdd"
 
         wg.mount_volume(attach_result.device, volume)
+
+    else:
+        volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"
+
+        wg.run_storage_workload_generator(volume_id=volume_id)

@@ -152,7 +152,7 @@ def umount_device(device, debug= False):
     return True
 
 
-def grep(input, match = "", openstack = True):
+def grep(input, match = "", openstack = False):
     """ grep equivalent for debugging in pdb """
 
     output = []
@@ -202,41 +202,4 @@ def grep(input, match = "", openstack = True):
     return output
 
 if __name__ == "__main__":
-
-    # p.run_fio_test()
-
-    id = grep(
-"""
-+--------------------------------+--------------------------------------+
-| Property                       | Value                                |
-+--------------------------------+--------------------------------------+
-| attachments                    | []                                   |
-| availability_zone              | nova                                 |
-| bootable                       | false                                |
-| consistencygroup_id            | None                                 |
-| created_at                     | 2016-10-20T14:33:33.000000           |
-| description                    | None                                 |
-| encrypted                      | False                                |
-| id                             | 4233f033-6118-4abb-b5fe-4973c0aafd70 |
-| metadata                       | {}                                   |
-| migration_status               | None                                 |
-| multiattach                    | False                                |
-| name                           | vol2                                 |
-| os-vol-host-attr:host          | None                                 |
-| os-vol-mig-status-attr:migstat | None                                 |
-| os-vol-mig-status-attr:name_id | None                                 |
-| os-vol-tenant-attr:tenant_id   | 666da5edb7dd4ac1a642a1fdd0f0f8f0     |
-| replication_status             | disabled                             |
-| size                           | 1                                    |
-| snapshot_id                    | None                                 |
-| source_volid                   | None                                 |
-| status                         | creating                             |
-| updated_at                     | None                                 |
-| user_id                        | 275716005ea14ce8a8e1c4a7c05c6ccc     |
-| volume_type                    | None                                 |
-+--------------------------------+--------------------------------------+
-""", "id")
-
-    # print(id[1].split('|')[2].strip())
-
-    print id
+    pass
