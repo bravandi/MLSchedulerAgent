@@ -7,7 +7,42 @@ from keystoneauth1 import session
 
 from cinderclient import client as c_client
 from novaclient import client as n_client
+import json
+import os.path
 import re
+
+class Backend():
+
+    save_path = '/root/backend'
+    specifications = None
+
+    def __init__(self):
+        self.load()
+
+        # try:
+        #     if os.path.isfile(self.save_path):
+        #         self.load()
+        #
+        #     else:
+        #         self.save()
+        #
+        # except:
+        #     self.save()
+
+    def load(self):
+
+        with open(self.save_path) as data_file:
+
+            self.specifications = json.load(data_file)
+
+            return
+
+    def save(self):
+        with open(self.save_path, 'w') as outfile:
+
+            json.dump(self.specifications, outfile)
+
+backend_info = Backend()
 
 def get_session():
     auth = v3.Password(auth_url="http://controller:35357/v3",
@@ -202,4 +237,5 @@ def grep(input, match = "", openstack = False):
     return output
 
 if __name__ == "__main__":
+    print backend_info.specifications
     pass

@@ -2,7 +2,7 @@ import tools
 import time
 import sys
 import threading
-
+import communication
 import pdb
 
 
@@ -50,7 +50,7 @@ class BlockWorkloadGenerator():
 
         generator.start()
 
-    def create_volume(self):
+    def create_volume(self, size=1):
         '''
 
         :return: returns volume object
@@ -58,10 +58,25 @@ class BlockWorkloadGenerator():
 
         # TODO --name create a naming convention something like tenant hostname + an index
 
-        # todo use cinder python api
+        id = communication.insert_volume_request(
+            workload_id=1,
+            capacity=size,
+            type=0,
+            read_iops=500,
+            write_iops=500
+        )
+
         cinder = tools.get_cinder_client()
 
-        volume = cinder.volumes.create(1, name="vol2")
+        volume = cinder.volumes.create(size, name=str(id))
+
+        # todo must call from scheduler it self
+        # communication.add_volume(
+        #     cinder_id=volume.id,
+        #     backend_id=tools.Backend.specifications["id"],
+        #     schedule_response=communication.ScheduleResponse.Accepted,
+        #     capacity=size
+        # )
 
         return volume
 
@@ -74,10 +89,10 @@ class BlockWorkloadGenerator():
                     result.device: the device in the tenant operation system that the volume is attached to
         '''
 
-        print ("attach_volume instance_id=%s volume_id=%s", instance_id, volume_id)
-
         # wait until the volume is ready
         tools.cinder_wait_for_volume_status(volume_id, status="available")
+
+        print ("attach_volume instance_id=%s volume_id=%s", instance_id, volume_id)
 
         nova = tools.get_nova_client()
 
@@ -191,7 +206,7 @@ if __name__ == "__main__":
     elif "del-avail" in sys.argv:
         wg.remove_all_available_volumes()
 
-    elif "add-vol" in sys.argv:
+    elif "add" in sys.argv:
 
         volume = wg.create_volume()
 
@@ -204,6 +219,16 @@ if __name__ == "__main__":
         wg.mount_volume(attach_result.device, volume)
 
     else:
-        volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"
+        # volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"
+        #
+        # wg.run_storage_workload_generator(volume_id=volume_id)
 
-        wg.run_storage_workload_generator(volume_id=volume_id)
+        print communication.insert_volume_request(
+            workload_id=1,
+            capacity=1,
+            type=0,
+            read_iops=500,
+            write_iops=500
+        )
+
+        pass

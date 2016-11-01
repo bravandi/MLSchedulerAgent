@@ -6,24 +6,25 @@ import json
 
 __server_url = 'http://CinderDevelopmentEnv:8888/'
 
-class ScheduleResponse(Enum):
-    Accepted = 1,
-    Capacity = 2,
-    IOPS = 3,
-    CapacityAndIOPS = 4
-
-
-def add_volume(cinder_id, backend_id, schedule_response, capacity, create_clock = datetime.now()):
+def insert_volume_request(workload_id, capacity, type, read_iops, write_iops, create_clock = 0, create_time = datetime.now()):
 
     data = {
-        "cinder_id": cinder_id,
-        "backend_ID": backend_id,
-        "schedule_response_ID": schedule_response,
+        "workload_id": workload_id,
         "capacity": capacity,
-        "create_clock": create_clock
+        "type": type,
+        "read_iops": read_iops,
+        "write_iops": write_iops,
+        "create_clock": create_clock,
+        "create_time": create_time
     }
 
-    return requests.post(__server_url + "insert_volume", data=data)
+    return _parse_response(requests.post(__server_url + "insert_volume_request", data=data))
+
+
+def _parse_response(response):
+
+    return int(response.content)
+
 
 
 # payload = {'key1': 'value1', 'key2': 'value2'}
@@ -43,4 +44,22 @@ def add_volume(cinder_id, backend_id, schedule_response, capacity, create_clock 
 # r = requests.options('http://httpbin.org/get')
 
 if __name__ == "__main__":
-    print add_volume(cinder_id=uuid.uuid1(), backend_id=1, schedule_response=ScheduleResponse.Accepted, capacity=1)
+    # print add_volume(
+    #     cinder_id=uuid.uuid1(),
+    #     backend_id=1,
+    #     schedule_response=ScheduleResponse.Accepted,
+    #     capacity=1)
+
+    # print add_volume_request(
+    #     workload_id=1,
+    #     capacity=1,
+    #     type=0,
+    #     read_iops=500,
+    #     write_iops=500
+    # )
+
+    q = requests.get(__server_url, data={"zz": 12})
+
+    print q.content
+
+    pass
