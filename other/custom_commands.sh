@@ -14,6 +14,10 @@ function c_killProc(){
 	ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
+function c_killPerformanceEvaluation(){
+	ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs kill -9
+}
+
 function c_killWorkloadGenerator(){
 	ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs kill -9
 }

@@ -1,8 +1,5 @@
 import requests
-from enum import Enum
 from datetime import datetime
-import uuid
-import json
 
 __server_url = 'http://CinderDevelopmentEnv:8888/'
 
@@ -21,10 +18,44 @@ def insert_volume_request(workload_id, capacity, type, read_iops, write_iops, cr
     return _parse_response(requests.post(__server_url + "insert_volume_request", data=data))
 
 
+def insert_volume_performance_meter(experiment_id, cinder_volume_id, read_iops, write_iops, duration, io_test_output, volume_id=0, backend_id=0, sla_violation_id=0, terminate_wait=0, create_clock=0, create_time=datetime.now()):
+
+    data = {
+        "experiment_id": experiment_id,
+        "backend_id": backend_id,
+        "volume_id": volume_id,
+        "cinder_volume_id": cinder_volume_id,
+        "read_iops": read_iops,
+        "write_iops": write_iops,
+        "duration": duration,
+        "sla_violation_id": sla_violation_id,
+        "io_test_output": io_test_output,
+        "terminate_wait": terminate_wait,
+        "create_clock": create_clock,
+        "create_time": create_time
+    }
+
+    return _parse_response(requests.post(__server_url + "insert_volume_performance_meter", data=data))
+
+
+def delete_volume(id=0, cinder_id="", delete_clock=0, delete_time=datetime.now()):
+    data = {
+        "id": id,
+        "cinder_id": cinder_id,
+        "delete_clock": delete_clock,
+        "delete_time": delete_time
+    }
+
+    return _parse_response(requests.post(__server_url + "delete_volume", data=data))
+
+
 def _parse_response(response):
 
-    return int(response.content)
+    try:
+        return int(response.content)
+    except ValueError:
 
+        return response
 
 
 # payload = {'key1': 'value1', 'key2': 'value2'}
@@ -58,8 +89,20 @@ if __name__ == "__main__":
     #     write_iops=500
     # )
 
-    q = requests.get(__server_url, data={"zz": 12})
+    # print delete_volume(id=0, cinder_id="218485af-f6d4-44f9-ad6b-1ee98201568f")
 
-    print q.content
+    insert_volume_performance_meter(
+        experiment_id=1,
+        backend_id=0,
+        volume_id=0,
+        cinder_volume_id='b0705326-375d-4839-b467-a0545a312c92',
+        read_iops=500,
+        write_iops=500,
+        duration=7.68,
+        terminate_wait=0,
+        sla_violation_id=0,
+        io_test_output='')
+
+    # q = requests.get(__server_url, data={"zz": 12})
 
     pass

@@ -3,14 +3,14 @@ import time
 import sys
 import threading
 import communication
-import pdb
+from datetime import datetime
 
 
 class StorageWorkloadGenerator (threading.Thread):
     """
 
     """
-    def __init__(self, volume_id, workload_type, delay_between_simulator = 1):
+    def __init__(self, volume_id, workload_type, delay_between_simulator=1):
         """
 
         :param workload_type:
@@ -26,15 +26,26 @@ class StorageWorkloadGenerator (threading.Thread):
     def run(self):
 
         while True:
+            command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 25M \n" % self.volume_id
 
-            tools.run_command2("/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 500M" % self.volume_id, debug=True)
+            start_time = datetime.now()
+            tools.log(
+                "  %s--> start time ndisk on: %s  \ncommand: %s" %
+                (threading.currentThread().name, str(start_time), command)
+            )
+
+            out = tools.run_command2(command)
+
+            end_time = datetime.now()
+            difference = (end_time - start_time)
+            duration = difference.total_seconds()
+
+            print ("%s Duration: %s\n" % (threading.currentThread().name, str(duration)))
 
             time.sleep(self.delay_between_simulator)
 
 
-class BlockWorkloadGenerator():
-
-    current_columes = []
+class CinderWorkloadGenerator():
 
     current_vm_id = '2aac4553-7feb-4326-9028-bf923c3c88c3'
 
@@ -42,13 +53,15 @@ class BlockWorkloadGenerator():
 
         self.storage_workload_generator_instances = []
 
-    def run_storage_workload_generator(self, volume_id):
+    def run_storage_workload_generator(self):
 
-        generator = StorageWorkloadGenerator(volume_id=volume_id, workload_type="")
+        for volume in tools.get_all_attached_volumes(self.current_vm_id):
 
-        self.storage_workload_generator_instances.append(generator)
+            generator = StorageWorkloadGenerator(volume_id=volume.id, workload_type="")
 
-        generator.start()
+            self.storage_workload_generator_instances.append(generator)
+
+            generator.start()
 
     def create_volume(self, size=1):
         '''
@@ -100,7 +113,7 @@ class BlockWorkloadGenerator():
 
         return result
 
-    def mount_volume(self, device, volume, base_path = "/media/"):
+    def mount_volume(self, device, volume, base_path="/media/"):
         '''
 
         :param device:
@@ -134,7 +147,48 @@ class BlockWorkloadGenerator():
 
         # todo instead of 3 seconds
 
-    def detach_delete_all_volumes(self, mount_path = "/media/"):
+    def detach_delete_volume(self, cinder_volume_id):
+
+        self.detach_volume(cinder_volume_id)
+        self.delete_volume(cinder_volume_id)
+
+    def detach_volume(self, cinder_volume_id):
+
+        nova = tools.get_nova_client()
+
+        device = tools.check_is_device_mounted_to_volume(cinder_volume_id)
+
+        tools.umount_device(device)
+
+        device = tools.check_is_device_mounted_to_volume(cinder_volume_id)
+
+        if device == '':
+            # detach volume
+            nova.volumes.delete_server_volume(self.current_vm_id, cinder_volume_id)
+
+            # consider if deletion fails then what to do...
+            communication.delete_volume(cinder_id=cinder_volume_id)
+
+        return device
+
+    def delete_volume(self, cinder_volume_id, mount_path="/media/"):
+
+        cinder = tools.get_cinder_client()
+
+        while True:
+
+            vol_reload = cinder.volumes.get(cinder_volume_id)
+
+            if vol_reload.status != 'detaching':
+                break
+
+        if vol_reload.status == 'available':
+            cinder.volumes.delete(cinder_volume_id)
+
+            # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
+            tools.run_command(["rm", "-d", "-r", mount_path + cinder_volume_id])
+
+    def detach_delete_all_volumes(self, mount_path="/media/"):
         """
 
         :param mount_path: must end with /
@@ -198,11 +252,19 @@ class BlockWorkloadGenerator():
 
 if __name__ == "__main__":
 
-    wg = BlockWorkloadGenerator()
+    wg = CinderWorkloadGenerator()
 
     if "det-del" in sys.argv:
-        wg.detach_delete_all_volumes()
 
+        if len(sys.argv) == 2:
+
+            wg.detach_delete_all_volumes()
+
+        else:
+
+            wg.detach_delete_volume(sys.argv[2])
+
+        pass
     elif "del-avail" in sys.argv:
         wg.remove_all_available_volumes()
 
@@ -212,23 +274,21 @@ if __name__ == "__main__":
 
         attach_result = wg.attach_volume(wg.current_vm_id, volume.id)
 
-        # print(attach_result)
-
-        # device_attached = "/dev/vdd"
-
         wg.mount_volume(attach_result.device, volume)
 
-    else:
+    elif "storage" in sys.argv:
         # volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"
-        #
-        # wg.run_storage_workload_generator(volume_id=volume_id)
 
-        print communication.insert_volume_request(
-            workload_id=1,
-            capacity=1,
-            type=0,
-            read_iops=500,
-            write_iops=500
-        )
+        wg.run_storage_workload_generator()
+
+    else:
+
+        # print communication.insert_volume_request(
+        #     workload_id=1,
+        #     capacity=1,
+        #     type=0,
+        #     read_iops=500,
+        #     write_iops=500
+        # )
 
         pass

@@ -4,45 +4,73 @@ import subprocess
 import pdb
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
-
+from datetime import datetime
 from cinderclient import client as c_client
 from novaclient import client as n_client
-import json
+
 import os.path
-import re
 
-class Backend():
+# import json
+# class Backend():
+#
+#     save_path = '/root/backend'
+#     specifications = {
+#         "ip": "10.18.75.xx",
+#         "capacity": 1,
+#         "id": 0,
+#         "cinder_id": "blockXX@lvm",
+#         "host_name": "blockXX"
+#     }
+#
+#     def __init__(self):
+#         self.load()
+#
+#         # try:
+#         #     if os.path.isfile(self.save_path):
+#         #         self.load()
+#         #
+#         #     else:
+#         #         self.save()
+#         #
+#         # except:
+#         #     self.save()
+#
+#     def load(self):
+#
+#         with open(self.save_path) as data_file:
+#
+#             self.specifications = json.load(data_file)
+#
+#             return
+#
+#     def save(self):
+#         with open(self.save_path, 'w') as outfile:
+#
+#             json.dump(self.specifications, outfile)
 
-    save_path = '/root/backend'
-    specifications = None
+# backend_info = Backend()
 
-    def __init__(self):
-        self.load()
 
-        # try:
-        #     if os.path.isfile(self.save_path):
-        #         self.load()
-        #
-        #     else:
-        #         self.save()
-        #
-        # except:
-        #     self.save()
+def log(message, debug=False):
 
-    def load(self):
+    print ("\n" + message)
 
-        with open(self.save_path) as data_file:
 
-            self.specifications = json.load(data_file)
+def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path="/media"):
 
-            return
+    if from_nova:
+        # returns volume object the volume will be ().id
+        nova = get_nova_client()
+        return nova.volumes.get_server_volumes(virtual_machine_id)
 
-    def save(self):
-        with open(self.save_path, 'w') as outfile:
+    else:
+        # returns a list of string containing the folders names
+        return os.walk(mount_base_path).next()[1]
 
-            json.dump(self.specifications, outfile)
 
-backend_info = Backend()
+def get_time_difference(start_time, end_time=datetime.now()):
+    difference = (end_time - start_time)
+    return difference.total_seconds()
 
 def get_session():
     auth = v3.Password(auth_url="http://controller:35357/v3",
@@ -82,6 +110,7 @@ def cinder_wait_for_volume_status(volume_id, status, timeout = 0):
 
             return True
 
+
 # todo design a proper error management when calling openstack services using client API ies
 def get_cinder_client():
 
@@ -91,6 +120,7 @@ def get_cinder_client():
 def get_nova_client():
 
     return n_client.Client(2, session=get_session())
+
 
 def create_sequential_folder(path, folder_name):
     '''
@@ -175,7 +205,7 @@ def check_is_device_mounted_to_volume(volume_id):
 
 
 def umount_device(device, debug= False):
-    out, err = run_command(["umount", device], debug=False)
+    out, err = run_command(["umount", "-f", "-l", device], debug=False)
 
     if debug:
         print ("\nrun_command:\n" + "umount " + device + "\nOUT -->" + out)
@@ -237,5 +267,5 @@ def grep(input, match = "", openstack = False):
     return output
 
 if __name__ == "__main__":
-    print backend_info.specifications
+    # print backend_info.specifications
     pass

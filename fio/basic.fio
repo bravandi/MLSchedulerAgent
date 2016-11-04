@@ -8,7 +8,8 @@ gtod_reduce=1
 #filename=test_filename2
 bs=4k
 iodepth=64
-size=128m
+size=25m
+#size=128m
 readwrite=randrw
 rwmixread=75
 
