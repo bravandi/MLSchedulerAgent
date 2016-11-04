@@ -3,7 +3,18 @@ from datetime import datetime
 
 __server_url = 'http://CinderDevelopmentEnv:8888/'
 
-def insert_volume_request(workload_id, capacity, type, read_iops, write_iops, create_clock = 0, create_time = datetime.now()):
+def insert_volume_request(
+        workload_id,
+        capacity,
+        type,
+        read_iops,
+        write_iops,
+        create_clock=0,
+        create_time=None):
+
+    if create_time is None:
+        create_time = datetime.now()
+
 
     data = {
         "workload_id": workload_id,
@@ -18,7 +29,22 @@ def insert_volume_request(workload_id, capacity, type, read_iops, write_iops, cr
     return _parse_response(requests.post(__server_url + "insert_volume_request", data=data))
 
 
-def insert_volume_performance_meter(experiment_id, cinder_volume_id, read_iops, write_iops, duration, io_test_output, volume_id=0, backend_id=0, sla_violation_id=0, terminate_wait=0, create_clock=0, create_time=datetime.now()):
+def insert_volume_performance_meter(
+        experiment_id,
+        cinder_volume_id,
+        read_iops,
+        write_iops,
+        duration,
+        io_test_output,
+        volume_id=0,
+        backend_id=0,
+        sla_violation_id=0,
+        terminate_wait=0,
+        create_clock=0,
+        create_time=None):
+
+    if create_time is None:
+        create_time = datetime.now()
 
     data = {
         "experiment_id": experiment_id,
@@ -38,7 +64,15 @@ def insert_volume_performance_meter(experiment_id, cinder_volume_id, read_iops, 
     return _parse_response(requests.post(__server_url + "insert_volume_performance_meter", data=data))
 
 
-def delete_volume(id=0, cinder_id="", delete_clock=0, delete_time=datetime.now()):
+def delete_volume(
+        id=0,
+        cinder_id="",
+        delete_clock=0,
+        delete_time=None):
+
+    if delete_time is None:
+        delete_time = datetime.now()
+
     data = {
         "id": id,
         "cinder_id": cinder_id,

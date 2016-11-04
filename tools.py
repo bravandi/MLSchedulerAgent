@@ -68,7 +68,16 @@ def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path
         return os.walk(mount_base_path).next()[1]
 
 
-def get_time_difference(start_time, end_time=datetime.now()):
+def get_time_difference(start_time, end_time=None):
+    if isinstance(start_time, basestring):
+        start_time = convert_string_datetime(start_time)
+
+    if isinstance(end_time, basestring):
+        end_time = convert_string_datetime(end_time)
+
+    if end_time is None:
+        end_time = datetime.now()
+
     difference = (end_time - start_time)
     return difference.total_seconds()
 
@@ -202,6 +211,16 @@ def check_is_device_mounted_to_volume(volume_id):
         return mounted[0].split(' ')[0]
 
     return ''
+
+
+def convert_string_datetime(input):
+    input = input.strip()
+    if input == '':
+        return None
+    else:
+        return datetime.strptime(input, "%Y-%m-%d %H:%M:%S.%f")
+
+    return input
 
 
 def umount_device(device, debug= False):

@@ -4,7 +4,7 @@ from datetime import datetime
 import communication
 import time
 import os
-from multiprocessing import Process
+from multiprocessing import Process, Array
 import pdb
 
 # class FIOTest(threading.Thread):
@@ -28,36 +28,48 @@ class FIOTest:
         self.test_path = test_path
         self.volume_path = volume_path
         self.cinder_volume_id = cinder_volume_id
-        self.last_start_time = None
-        self.last_end_time = None
-        self.last_terminate_time = None
+
+        tmp = type('', (object,),{'value': ''})()
+
+        self.last_start_time = tmp
+        self.last_end_time = tmp
+        self.last_terminate_time = tmp
         self.proc = None
 
     def get_last_start_time(self):
-        return self.last_start_time
+        return tools.convert_string_datetime(self.last_start_time.value)
 
     def get_last_end_time(self):
-        return self.last_end_time
+        return tools.convert_string_datetime(self.last_end_time.value)
 
     def get_last_terminate_time(self):
-        return self.last_terminate_time
+        return tools.convert_string_datetime(self.last_terminate_time.value)
 
     def start(self):
-        self.last_start_time = datetime.now()
-        self.last_end_time = None
-        self.last_terminate_time = None
+        self.last_start_time = Array('c', str(datetime.now()))
+        self.last_end_time = Array('c', " " * 26)
+        self.last_terminate_time = Array('c', " " * 26)
 
-        self.proc = Process(target=FIOTest.run_f_test, args=(self,))
+        self.proc = Process(
+            target=FIOTest.run_f_test,
+            args=(self,
+                  self.last_start_time,
+                  self.last_end_time,
+                  self.last_terminate_time, ))
+
         # tools.log("   Start test for volume: %s Time: %s" %
         #           (self.cinder_volume_id, self.last_start_time))
         self.proc.start()
 
+        # print("ZZZZZZZZZZZZZZZZZ" + self.last_end_time.value)
+
     def terminate(self):
-        self.last_end_time = None
-        self.last_terminate_time = datetime.now()
+        self.last_end_time = Array('c', " " * 26)
+        self.last_terminate_time = Array('c', str(datetime.now()))
 
         tools.log("   {terminate} Terminate test for volume: %s Time: %s" %
-                  (self.cinder_volume_id, self.last_terminate_time))
+                  (self.cinder_volume_id, self.last_terminate_time.value))
+
         self.proc.terminate()
 
     def is_alive(self):
@@ -68,11 +80,11 @@ class FIOTest:
         return self.proc.is_alive()
 
     @staticmethod
-    def run_f_test(test_instance):
+    def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time):
 
         tools.log(
             "   {run_f_test} Time: %s \ncommand: %s" %
-            (str(test_instance.last_start_time), test_instance.fio_bin_path + " " + test_instance.test_path))
+            (str(test_instance.last_start_time.value), test_instance.fio_bin_path + " " + test_instance.test_path))
 
         out, err = tools.run_command([test_instance.fio_bin_path, test_instance.test_path], debug=False)
         # out, err = tools.run_command2(self.fio_bin_path + " " + self.test_path, debug=False)
@@ -86,9 +98,10 @@ class FIOTest:
             start_index = line.index("iops=") + 5
             iops_measured[line[2:line.index(":")].strip()] = int(line[start_index:line.index(",", start_index, len(line))])
 
-        test_instance.last_end_time = datetime.now()
+        # print "test_instance.last_end_time:" + last_end_time.value
+        last_end_time.value = str(datetime.now())
 
-        duration = tools.get_time_difference(test_instance.last_start_time, test_instance.last_end_time)
+        duration = tools.get_time_difference(last_start_time.value, last_end_time.value)
 
         out = out + "\nduration: " + str(duration)
 
@@ -100,9 +113,11 @@ class FIOTest:
             duration=float(duration),
             io_test_output=out)
 
-        out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S.%f"), 'w')
-        out_file.write(out)
-        out_file.close()
+        # todo have switch for either saving test results or not
+        if False:
+            out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S.%f"), 'w')
+            out_file.write(out)
+            out_file.close()
 
         tools.log("    IOPS %s: duration: %s" %
                   (iops_measured, str(duration)))
@@ -147,8 +162,8 @@ class PerformanceEvaluation():
         f_test = self.f_test_instances[cinder_volume_id]
 
         if f_test.is_alive():
-
-            difference = (datetime.now() - f_test.last_start_time).total_seconds()
+            difference = tools.get_time_difference(f_test.get_last_start_time())
+            # difference = (datetime.now() - f_test.last_start_time).total_seconds()
             # tools.log(" [terminate] because taking more than %s seconds" % difference)
 
             if difference > 2000:
@@ -164,24 +179,24 @@ class PerformanceEvaluation():
                     io_test_output="")
 
         else:
-            pdb.set_trace()
+
             last_end_time = f_test.get_last_end_time()
             last_terminate_time = f_test.get_last_terminate_time()
 
-            if last_end_time != None:
-                pdb.set_trace()
-                tools.log("[f_test.last_end_time] %s" %
-                          str(tools.get_time_difference(last_end_time)))
-            # have 20 seconds gap between restarting the tests
-            if last_end_time != None and tools.get_time_difference(last_end_time) < 40:
+            # if last_end_time is not None:
+            #     tools.log("  ***[f_test.last_end_time DIFFERENCE] %s" %
+            #               str(tools.get_time_difference(last_end_time)))
+
+            # have 40 seconds gap between restarting the tests
+            if last_end_time is not None and tools.get_time_difference(last_end_time) < 10:
                 return
 
             # if terminated wait for 4 seconds then start the process
-            if last_terminate_time != None and tools.get_time_difference(last_terminate_time) < 4:
+            if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < 4:
                 return
 
             # make sure the test file [*.fio] exists
-            if os.path.isfile(test_path) == False:
+            if True or os.path.isfile(test_path) == False:
 
                 with open(self.fio_tests_conf_path + test_name, 'r') as myfile:
                     data = myfile.read().split('\n')
