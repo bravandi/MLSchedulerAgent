@@ -10,7 +10,7 @@ class StorageWorkloadGenerator (threading.Thread):
     """
 
     """
-    def __init__(self, volume_id, workload_type, delay_between_simulator=1):
+    def __init__(self, volume_id, workload_type, delay_between_simulator=1.0):
         """
 
         :param workload_type:
@@ -26,7 +26,7 @@ class StorageWorkloadGenerator (threading.Thread):
     def run(self):
 
         while True:
-            command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 25M \n" % self.volume_id
+            command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % self.volume_id
 
             start_time = datetime.now()
             tools.log(
@@ -40,7 +40,8 @@ class StorageWorkloadGenerator (threading.Thread):
             difference = (end_time - start_time)
             duration = difference.total_seconds()
 
-            print ("%s Duration: %s\n" % (threading.currentThread().name, str(duration)))
+            tools.log("%s Duration: %s\n%s" %
+                   (threading.currentThread().name, str(duration), out))
 
             time.sleep(self.delay_between_simulator)
 
@@ -57,7 +58,10 @@ class CinderWorkloadGenerator():
 
         for volume in tools.get_all_attached_volumes(self.current_vm_id):
 
-            generator = StorageWorkloadGenerator(volume_id=volume.id, workload_type="")
+            generator = StorageWorkloadGenerator(
+                volume_id=volume.id,
+                workload_type="",
+                delay_between_simulator=2.5)
 
             self.storage_workload_generator_instances.append(generator)
 

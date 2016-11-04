@@ -166,7 +166,7 @@ class PerformanceEvaluation():
             # difference = (datetime.now() - f_test.last_start_time).total_seconds()
             # tools.log(" [terminate] because taking more than %s seconds" % difference)
 
-            if difference > 2000:
+            if difference > 150:
                 f_test.terminate()
 
                 communication.insert_volume_performance_meter(
@@ -188,11 +188,11 @@ class PerformanceEvaluation():
             #               str(tools.get_time_difference(last_end_time)))
 
             # have 40 seconds gap between restarting the tests
-            if last_end_time is not None and tools.get_time_difference(last_end_time) < 10:
+            if last_end_time is not None and tools.get_time_difference(last_end_time) < 15:
                 return
 
             # if terminated wait for 4 seconds then start the process
-            if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < 4:
+            if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < 5:
                 return
 
             # make sure the test file [*.fio] exists
@@ -232,37 +232,5 @@ if __name__ == "__main__":
     p = PerformanceEvaluation()
 
     p.run_fio_test()
-
-    z = """
-job1: (g=0): rw=randrw, bs=4K-4K/4K-4K, ioengine=libaio, iodepth=64
-fio-2.0.9
-Starting 1 process
-
-job1: (groupid=0, jobs=1): err= 0: pid=4614: Sat Oct 29 17:19:28 2016
-  read : io=98676KB, bw=103979KB/s, iops=25994 , runt=   949msec
-  write: io=32396KB, bw=34137KB/s, iops=8534 , runt=   949msec
-  cpu          : usr=8.86%, sys=59.07%, ctx=4489, majf=0, minf=5
-  IO depths    : 1=0.1%, 2=0.1%, 4=0.1%, 8=0.1%, 16=0.1%, 32=0.1%, >=64=99.8%
-     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
-     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.1%, >=64=0.0%
-     issued    : total=r=24669/w=8099/d=0, short=r=0/w=0/d=0
-
-Run status group 0 (all jobs):
-   READ: io=98676KB, aggrb=103978KB/s, minb=103978KB/s, maxb=103978KB/s, mint=949msec, maxt=949msec
-  WRITE: io=32396KB, aggrb=34136KB/s, minb=34136KB/s, maxb=34136KB/s, mint=949msec, maxt=949msec
-
-Disk stats (read/write):
-  vdb: ios=23390/7699, merge=0/0, ticks=37236/14632, in_queue=51856, util=90.00%
-
-duration: 1.268539
-    """
-    IOPS = {}
-
-    # print len(z)
-
-    for line in tools.grep(z, "iops"):
-
-        start = line.index("iops=") + 5
-        IOPS[line[2:line.index(":")]] = line[start:line.index(",", start, len(line))]
 
 
