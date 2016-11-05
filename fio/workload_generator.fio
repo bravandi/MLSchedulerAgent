@@ -7,8 +7,9 @@ gtod_reduce=1
 #name=test
 #filename=test_filename2
 bs=4k
-iodepth=64
-size=256m
+#iodepth=64
+iodepth=1
+size=64m
 #size=128m
 
 readwrite=read
@@ -16,4 +17,4 @@ readwrite=read
 
 #rwmixread=75
 
-[WG_job]
+[workload_generator]

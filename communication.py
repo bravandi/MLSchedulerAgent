@@ -88,6 +88,8 @@ def delete_volume(
 def insert_workload_generator(
         tenant_id,
         duration,
+        read_iops,
+        write_iops,
         command,
         output,
         create_clock=0,
@@ -99,6 +101,8 @@ def insert_workload_generator(
     data = {
         "tenant_id": tenant_id,
         "duration": duration,
+        "read_iops": read_iops,
+        "write_iops": write_iops,
         "command": command,
         "output": output,
         "create_clock": create_clock,
@@ -166,6 +170,8 @@ if __name__ == "__main__":
     insert_workload_generator(
         tenant_id=1,
         duration=1,
+        read_iops=1,
+        write_iops=1,
         command="",
         output="")
 

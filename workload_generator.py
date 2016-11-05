@@ -54,17 +54,21 @@ class StorageWorkloadGenerator:
 
             duration = tools.get_time_difference(start_time)
 
+            iops_measured = tools.get_iops_measures_from_fio_output(out)
+
             communication.insert_workload_generator(
                 tenant_id=1,
                 duration=duration,
+                read_iops=iops_measured["read"],
+                write_iops=iops_measured["write"],
                 command=command,
-                output=out)
+                output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
 
             if generator_instance.show_output == False:
-                out = ""
+                out = "SHOW_OUTPUT = False"
 
-            tools.log(" DURATION: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                   (str(duration), generator_instance.volume_id, out, err))
+            tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                   (str(duration), str(iops_measured), generator_instance.volume_id, out, err))
 
             time.sleep(generator_instance.delay_between_simulator)
 
@@ -92,7 +96,7 @@ class CinderWorkloadGenerator:
                 volume_id=volume.id,
                 workload_type="",
                 delay_between_generation=self.delay_between_workload_generation,
-                show_output=True,
+                show_output=False,
                 test_path=test_path)
 
             # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
@@ -303,9 +307,9 @@ class CinderWorkloadGenerator:
 if __name__ == "__main__":
 
     wg = CinderWorkloadGenerator(
-        current_vm_id='2aac4553-7feb-4326-9028-bf923c3c88c3',
+        current_vm_id=tools.get_current_tenant_id(),
         fio_test_name="workload_generator.fio",
-        delay_between_workload_generation=2.5
+        delay_between_workload_generation=0.5
     )
 
     if "det-del" in sys.argv:

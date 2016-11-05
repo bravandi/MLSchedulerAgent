@@ -10,6 +10,30 @@ from novaclient import client as n_client
 
 import os.path
 
+class Configs:
+
+    def __init__(
+            self,
+            workload_gen_delay_between_workload_generation,
+            workload_gen_fio_test_name,
+            performance_eval_terminate_if_takes,
+            performance_eval_generation_fio_test_name,
+            performance_eval_restart_gap,
+            performance_eval_restart_gap_after_terminate
+            ):
+
+        pass
+
+
+
+def get_current_tenant_id():
+    if os.path.isfile("/root/tenantid") == False:
+
+        return None
+
+    with open("/root/tenantid") as data_file:
+        return data_file.read(36)
+
 # import json
 # class Backend():
 #
@@ -49,6 +73,25 @@ import os.path
 #             json.dump(self.specifications, outfile)
 
 # backend_info = Backend()
+
+
+def get_iops_measures_from_fio_output(out):
+
+    iops_measured = {
+        "read": -1,
+        "write": -1
+    }
+
+    for line in grep(out, "iops"):
+        start_index = line.index("iops=") + 5
+
+        if line[2:line.index(":")].strip() == "read":
+            iops_measured["read"] = int(line[start_index:line.index(",", start_index, len(line))])
+
+        if line[2:line.index(":")].strip() == "write":
+            iops_measured["write"] = int(line[start_index:line.index(",", start_index, len(line))])
+
+    return iops_measured
 
 
 def log(message, debug=False):
@@ -287,4 +330,8 @@ def grep(input, match = "", openstack = False):
 
 if __name__ == "__main__":
     # print backend_info.specifications
+
+    print (get_current_tenant_id())
+    print (len(get_current_tenant_id()))
+    print(len("2aac4553-7feb-4326-9028-bf923c3c88c3"))
     pass

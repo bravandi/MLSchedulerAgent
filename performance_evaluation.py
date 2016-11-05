@@ -12,7 +12,7 @@ class FIOTest:
 
     """
 
-    def __init__(self, test_path, volume_path, cinder_volume_id):
+    def __init__(self, test_path, volume_path, cinder_volume_id, show_output=False):
         """
 
         :param test_path:
@@ -33,6 +33,7 @@ class FIOTest:
         self.last_end_time = tmp
         self.last_terminate_time = tmp
         self.proc = None
+        self.show_output = show_output
 
     def get_last_start_time(self):
         return tools.convert_string_datetime(self.last_start_time.value)
@@ -85,31 +86,13 @@ class FIOTest:
             (str(test_instance.last_start_time.value), PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
 
         out, err = tools.run_command([PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
-        # out, err = tools.run_command2(        PerformanceEvaluation.fio_bin_path + " " + self.test_path, debug=False)
-        # out, err = tools.run_command2("/root/fio-2.0.9/fio")
 
-        print (out)
-
-        iops_measured = {
-            "read": -1,
-            "write": -1
-        }
-
-        for line in tools.grep(out, "iops"):
-            start_index = line.index("iops=") + 5
-
-            if line[2:line.index(":")].strip() == "read":
-                iops_measured["read"] = int(line[start_index:line.index(",", start_index, len(line))])
-
-            if line[2:line.index(":")].strip() == "write":
-                iops_measured["write"] = int(line[start_index:line.index(",", start_index, len(line))])
+        iops_measured = tools.get_iops_measures_from_fio_output(out)
 
         # print "test_instance.last_end_time:" + last_end_time.value
         last_end_time.value = str(datetime.now())
 
         duration = tools.get_time_difference(last_start_time.value, last_end_time.value)
-
-        out = out + "\nduration: " + str(duration)
 
         communication.insert_volume_performance_meter(
             experiment_id=1,
@@ -118,7 +101,7 @@ class FIOTest:
             read_iops=iops_measured["read"],
             write_iops=iops_measured["write"],
             duration=float(duration),
-            io_test_output=out)
+            io_test_output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
 
         # todo have switch for either saving test results or not
         # if False:
@@ -126,6 +109,11 @@ class FIOTest:
         #     out_file.write(out)
         #     out_file.close()
 
+        if test_instance.show_output == False:
+            out = "SHOW_OUTPUT = False"
+
+        tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                  (str(duration), str(iops_measured), test_instance.cinder_volume_id, out, err))
         tools.log("    IOPS %s: duration: %s" %
                   (iops_measured, str(duration)))
         # return IOPS, difference.total_seconds(), out
@@ -158,7 +146,8 @@ class PerformanceEvaluation:
 
             f_test = FIOTest(test_path=test_path,
                              volume_path=volume_path,
-                             cinder_volume_id=cinder_volume_id)
+                             cinder_volume_id=cinder_volume_id,
+                             show_output=True)
 
             PerformanceEvaluation.f_test_instances[cinder_volume_id] = f_test
 
@@ -235,7 +224,7 @@ if __name__ == "__main__":
 
     p = PerformanceEvaluation(
         fio_test_name='resource_evaluation.fio',
-        current_vm_id='2aac4553-7feb-4326-9028-bf923c3c88c3',
+        current_vm_id=tools.get_current_tenant_id(),
         terminate_if_takes=150,
         restart_gap=30,
         restart_gap_after_terminate=50
