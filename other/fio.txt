@@ -1,3 +1,15 @@
+More complete bad format:
+    https://linux.die.net/man/1/fio
+
+Best format:
+    http://www.cse.unsw.edu.au/~aaronc/iosched/doc/fio.1.html
+
+From Repo:
+    https://github.com/axboe/fio/blob/master/HOWTO
+
+I guess the best is:
+   https://github.com/axboe/fio
+
 /root/fio-2.0.9/fio --randrepeat=1 --ioengine=libaio --direct=1 --gtod_reduce=1 --name=test --directory=/media/volume1/ --filename=test_filename1 --bs=4k --iodepth=64 --size=256m --readwrite=randrw --rwmixread=75
 
 
@@ -6,4 +18,5 @@
 
 /root/fio-2.0.9/fio --randrepeat=1 --ioengine=libaio --direct=1 --gtod_reduce=1 --name=test --directory=/media/volume1/ --filename=test_filename3 --bs=4k --iodepth=64 --size=256m --readwrite=randrw --rwmixread=75
 
-
+--section allows choosing jobs
+/root/fio-2.0.9/fio --section=job1 --section=job2 /media/513af203-e66f-4477-9e8e-fd0338b759ea/basic.fio

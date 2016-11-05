@@ -1,5 +1,4 @@
 import tools
-import threading
 from datetime import datetime
 import communication
 import time
@@ -13,18 +12,17 @@ class FIOTest:
 
     """
 
-    def __init__(self, fio_bin_path, test_path, volume_path, cinder_volume_id):
+    def __init__(self, test_path, volume_path, cinder_volume_id):
         """
 
-        :param fio_bin_path:
         :param test_path:
         :param volume_path:
+        :param cinder_volume_id:
         :return: IOPS{read, write}
         :return: test duration (float)
         :return: test console output
         """
         # threading.Thread.__init__(self)
-        self.fio_bin_path = fio_bin_path
         self.test_path = test_path
         self.volume_path = volume_path
         self.cinder_volume_id = cinder_volume_id
@@ -63,12 +61,12 @@ class FIOTest:
 
         # print("ZZZZZZZZZZZZZZZZZ" + self.last_end_time.value)
 
-    def terminate(self):
+    def terminate(self, after_seconds):
         self.last_end_time = Array('c', " " * 26)
         self.last_terminate_time = Array('c', str(datetime.now()))
 
-        tools.log("   {terminate} Terminate test for volume: %s Time: %s" %
-                  (self.cinder_volume_id, self.last_terminate_time.value))
+        tools.log("   {TERMINATE} After %s seconds VOLUME: %s Time: %s" %
+                  (str(after_seconds), self.cinder_volume_id, self.last_terminate_time.value))
 
         self.proc.terminate()
 
@@ -84,19 +82,27 @@ class FIOTest:
 
         tools.log(
             "   {run_f_test} Time: %s \ncommand: %s" %
-            (str(test_instance.last_start_time.value), test_instance.fio_bin_path + " " + test_instance.test_path))
+            (str(test_instance.last_start_time.value), PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
 
-        out, err = tools.run_command([test_instance.fio_bin_path, test_instance.test_path], debug=False)
-        # out, err = tools.run_command2(self.fio_bin_path + " " + self.test_path, debug=False)
+        out, err = tools.run_command([PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
+        # out, err = tools.run_command2(        PerformanceEvaluation.fio_bin_path + " " + self.test_path, debug=False)
         # out, err = tools.run_command2("/root/fio-2.0.9/fio")
 
-        end_time = datetime.now()
+        print (out)
 
-        iops_measured = {}
+        iops_measured = {
+            "read": -1,
+            "write": -1
+        }
 
         for line in tools.grep(out, "iops"):
             start_index = line.index("iops=") + 5
-            iops_measured[line[2:line.index(":")].strip()] = int(line[start_index:line.index(",", start_index, len(line))])
+
+            if line[2:line.index(":")].strip() == "read":
+                iops_measured["read"] = int(line[start_index:line.index(",", start_index, len(line))])
+
+            if line[2:line.index(":")].strip() == "write":
+                iops_measured["write"] = int(line[start_index:line.index(",", start_index, len(line))])
 
         # print "test_instance.last_end_time:" + last_end_time.value
         last_end_time.value = str(datetime.now())
@@ -107,6 +113,7 @@ class FIOTest:
 
         communication.insert_volume_performance_meter(
             experiment_id=1,
+            tenant_id=1,
             cinder_volume_id=test_instance.cinder_volume_id,
             read_iops=iops_measured["read"],
             write_iops=iops_measured["write"],
@@ -114,63 +121,60 @@ class FIOTest:
             io_test_output=out)
 
         # todo have switch for either saving test results or not
-        if False:
-            out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S.%f"), 'w')
-            out_file.write(out)
-            out_file.close()
+        # if False:
+        #     out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S.%f"), 'w')
+        #     out_file.write(out)
+        #     out_file.close()
 
         tools.log("    IOPS %s: duration: %s" %
                   (iops_measured, str(duration)))
         # return IOPS, difference.total_seconds(), out
 
 
-class PerformanceEvaluation():
+class PerformanceEvaluation:
 
     fio_bin_path = "/root/fio-2.0.9/fio"
-
     fio_tests_conf_path = "/root/MLSchedulerAgent/fio/"
-
-    fio_test_name = 'basic.fio'
-
     mount_base_path = '/media/'
-
-    current_vm_id = '2aac4553-7feb-4326-9028-bf923c3c88c3'
-
-    cinder_client_path = '/root/python-cinderclient/cinder.py'
-
     f_test_instances = {}
 
-    def __init__(self):
+    def __init__(self, fio_test_name, current_vm_id, terminate_if_takes, restart_gap, restart_gap_after_terminate):
+
+        self.fio_test_name = fio_test_name
+        self.current_vm_id = current_vm_id
+        self.terminate_if_takes = terminate_if_takes
+        self.restart_gap = restart_gap
+        self.restart_gap_after_terminate = restart_gap_after_terminate
 
         pass
 
     def fio_test(self, cinder_volume_id, test_name):
 
         # outside if the if statement, in case the test is changed
-        volume_path = "%s%s/" % (self.mount_base_path, cinder_volume_id)
+        volume_path = "%s%s/" % (PerformanceEvaluation.mount_base_path, cinder_volume_id)
         test_path = volume_path + test_name
 
-        if self.f_test_instances.has_key(cinder_volume_id) == False:
+        if PerformanceEvaluation.f_test_instances.has_key(cinder_volume_id) == False:
 
-            f_test = FIOTest(fio_bin_path=self.fio_bin_path,
-                             test_path=test_path,
+            f_test = FIOTest(test_path=test_path,
                              volume_path=volume_path,
                              cinder_volume_id=cinder_volume_id)
 
-            self.f_test_instances[cinder_volume_id] = f_test
+            PerformanceEvaluation.f_test_instances[cinder_volume_id] = f_test
 
-        f_test = self.f_test_instances[cinder_volume_id]
+        f_test = PerformanceEvaluation.f_test_instances[cinder_volume_id]
 
         if f_test.is_alive():
             difference = tools.get_time_difference(f_test.get_last_start_time())
             # difference = (datetime.now() - f_test.last_start_time).total_seconds()
             # tools.log(" [terminate] because taking more than %s seconds" % difference)
 
-            if difference > 150:
-                f_test.terminate()
+            if difference > self.terminate_if_takes:
+                f_test.terminate(self.terminate_if_takes)
 
                 communication.insert_volume_performance_meter(
                     experiment_id=1,
+                    tenant_id=1,
                     cinder_volume_id=cinder_volume_id,
                     read_iops=0,
                     write_iops=0,
@@ -188,17 +192,17 @@ class PerformanceEvaluation():
             #               str(tools.get_time_difference(last_end_time)))
 
             # have 40 seconds gap between restarting the tests
-            if last_end_time is not None and tools.get_time_difference(last_end_time) < 15:
+            if last_end_time is not None and tools.get_time_difference(last_end_time) < self.restart_gap:
                 return
 
             # if terminated wait for 4 seconds then start the process
-            if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < 5:
+            if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < self.restart_gap_after_terminate:
                 return
 
             # make sure the test file [*.fio] exists
             if True or os.path.isfile(test_path) == False:
 
-                with open(self.fio_tests_conf_path + test_name, 'r') as myfile:
+                with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
                     data = myfile.read().split('\n')
 
                     data[1] = "directory=" + volume_path
@@ -229,7 +233,13 @@ class PerformanceEvaluation():
 
 if __name__ == "__main__":
 
-    p = PerformanceEvaluation()
+    p = PerformanceEvaluation(
+        fio_test_name='resource_evaluation.fio',
+        current_vm_id='2aac4553-7feb-4326-9028-bf923c3c88c3',
+        terminate_if_takes=150,
+        restart_gap=30,
+        restart_gap_after_terminate=50
+    )
 
     p.run_fio_test()
 

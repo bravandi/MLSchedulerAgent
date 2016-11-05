@@ -1,69 +1,115 @@
+import os
 import tools
 import time
 import sys
-import threading
+from multiprocessing import Process
 import communication
 from datetime import datetime
 
 
-class StorageWorkloadGenerator (threading.Thread):
+class StorageWorkloadGenerator:
     """
 
     """
-    def __init__(self, volume_id, workload_type, delay_between_simulator=1.0):
+    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_generation=1.0):
         """
 
         :param workload_type:
-        :param delay_between_simulator:
+        :param delay_between_generation:
         :return:
         """
 
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
         self.volume_id = volume_id
         self.workload_type = workload_type
-        self.delay_between_simulator = delay_between_simulator
+        self.delay_between_simulator = delay_between_generation
+        self.proc = None
+        self.show_output = show_output
+        self.test_path = test_path
 
-    def run(self):
+    def start(self):
+        self.proc = Process(
+            target=StorageWorkloadGenerator.run_workload_generator,
+            args=(self,))
+
+        # tools.log("   Start test for volume: %s Time: %s" %
+        #           (self.cinder_volume_id, self.last_start_time))
+        self.proc.start()
+
+    @staticmethod
+    def run_workload_generator(generator_instance):
 
         while True:
-            command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % self.volume_id
 
             start_time = datetime.now()
+
+            command = CinderWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
+
+            # command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % generator_instance.volume_id
             tools.log(
-                "  %s--> start time ndisk on: %s  \ncommand: %s" %
-                (threading.currentThread().name, str(start_time), command)
-            )
+                "   {run_f_test} Time: %s \ncommand: %s" %
+                (str(start_time), command))
 
-            out = tools.run_command2(command)
+            out, err = tools.run_command([CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
 
-            end_time = datetime.now()
-            difference = (end_time - start_time)
-            duration = difference.total_seconds()
+            duration = tools.get_time_difference(start_time)
 
-            tools.log("%s Duration: %s\n%s" %
-                   (threading.currentThread().name, str(duration), out))
+            communication.insert_workload_generator(
+                tenant_id=1,
+                duration=duration,
+                command=command,
+                output=out)
 
-            time.sleep(self.delay_between_simulator)
+            if generator_instance.show_output == False:
+                out = ""
+
+            tools.log(" DURATION: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                   (str(duration), generator_instance.volume_id, out, err))
+
+            time.sleep(generator_instance.delay_between_simulator)
 
 
-class CinderWorkloadGenerator():
+class CinderWorkloadGenerator:
+    fio_bin_path = "/root/fio-2.0.9/fio"
+    fio_tests_conf_path = "/root/MLSchedulerAgent/fio/"
+    mount_base_path = '/media/'
+    # storage_workload_generator_instances = []
 
-    current_vm_id = '2aac4553-7feb-4326-9028-bf923c3c88c3'
+    def __init__(self, current_vm_id, fio_test_name, delay_between_workload_generation):
 
-    def __init__(self):
-
-        self.storage_workload_generator_instances = []
+        self.current_vm_id = current_vm_id
+        self.fio_test_name = fio_test_name
+        self.delay_between_workload_generation = delay_between_workload_generation
 
     def run_storage_workload_generator(self):
 
         for volume in tools.get_all_attached_volumes(self.current_vm_id):
 
+            volume_path = "%s%s/" % (CinderWorkloadGenerator.mount_base_path, volume.id)
+            test_path = volume_path + self.fio_test_name
+
             generator = StorageWorkloadGenerator(
                 volume_id=volume.id,
                 workload_type="",
-                delay_between_simulator=2.5)
+                delay_between_generation=self.delay_between_workload_generation,
+                show_output=True,
+                test_path=test_path)
 
-            self.storage_workload_generator_instances.append(generator)
+            # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
+
+            if True or os.path.isfile(test_path) == False:
+
+                with open(CinderWorkloadGenerator.fio_tests_conf_path + self.fio_test_name, 'r') as myfile:
+                    data = myfile.read().split('\n')
+
+                    data[1] = "directory=" + volume_path
+
+                    volume_test_file = open(test_path, 'w')
+
+                    for item in data:
+                        volume_test_file.write("%s\n" % item)
+
+                    volume_test_file.close()
 
             generator.start()
 
@@ -256,7 +302,11 @@ class CinderWorkloadGenerator():
 
 if __name__ == "__main__":
 
-    wg = CinderWorkloadGenerator()
+    wg = CinderWorkloadGenerator(
+        current_vm_id='2aac4553-7feb-4326-9028-bf923c3c88c3',
+        fio_test_name="workload_generator.fio",
+        delay_between_workload_generation=2.5
+    )
 
     if "det-del" in sys.argv:
 

@@ -31,6 +31,7 @@ def insert_volume_request(
 
 def insert_volume_performance_meter(
         experiment_id,
+        tenant_id,
         cinder_volume_id,
         read_iops,
         write_iops,
@@ -48,6 +49,7 @@ def insert_volume_performance_meter(
 
     data = {
         "experiment_id": experiment_id,
+        "tenant_id": tenant_id,
         "backend_id": backend_id,
         "volume_id": volume_id,
         "cinder_volume_id": cinder_volume_id,
@@ -81,6 +83,29 @@ def delete_volume(
     }
 
     return _parse_response(requests.post(__server_url + "delete_volume", data=data))
+
+
+def insert_workload_generator(
+        tenant_id,
+        duration,
+        command,
+        output,
+        create_clock=0,
+        create_time=None):
+
+    if create_time is None:
+        create_time = datetime.now()
+
+    data = {
+        "tenant_id": tenant_id,
+        "duration": duration,
+        "command": command,
+        "output": output,
+        "create_clock": create_clock,
+        "create_time": create_time
+    }
+
+    return _parse_response(requests.post(__server_url + "insert_workload_generator", data=data))
 
 
 def _parse_response(response):
@@ -125,17 +150,24 @@ if __name__ == "__main__":
 
     # print delete_volume(id=0, cinder_id="218485af-f6d4-44f9-ad6b-1ee98201568f")
 
-    insert_volume_performance_meter(
-        experiment_id=1,
-        backend_id=0,
-        volume_id=0,
-        cinder_volume_id='b0705326-375d-4839-b467-a0545a312c92',
-        read_iops=500,
-        write_iops=500,
-        duration=7.68,
-        terminate_wait=0,
-        sla_violation_id=0,
-        io_test_output='')
+    # insert_volume_performance_meter(
+    #     experiment_id=1,
+    #     tenant_id=1,
+    #     backend_id=0,
+    #     volume_id=0,
+    #     cinder_volume_id='b0705326-375d-4839-b467-a0545a312c92',
+    #     read_iops=500,
+    #     write_iops=500,
+    #     duration=7.68,
+    #     terminate_wait=0,
+    #     sla_violation_id=0,
+    #     io_test_output='')
+
+    insert_workload_generator(
+        tenant_id=1,
+        duration=1,
+        command="",
+        output="")
 
     # q = requests.get(__server_url, data={"zz": 12})
 
