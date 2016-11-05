@@ -8,14 +8,13 @@ gtod_reduce=1
 #filename=test_filename2
 bs=4k
 iodepth=64
-size=255m
+size=64m
 #size=128m
 
-readwrite=randrw
 #readwrite=randrw
 
 
 rwmixread=75
 #rwmixread=75
 
-[job1]
+[resource_evaluation]
