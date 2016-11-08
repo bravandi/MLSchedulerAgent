@@ -5,7 +5,7 @@ import sys
 from multiprocessing import Process
 import communication
 from datetime import datetime
-
+import pdb
 
 class StorageWorkloadGenerator:
     """
@@ -122,8 +122,6 @@ class CinderWorkloadGenerator:
 
         :return: returns volume object
         '''
-
-        # TODO --name create a naming convention something like tenant hostname + an index
 
         id = communication.insert_volume_request(
             workload_id=1,

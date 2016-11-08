@@ -71,6 +71,14 @@ def delete_volume(
         cinder_id="",
         delete_clock=0,
         delete_time=None):
+    """
+    Delete either by record id or by the cinder volume id.
+    :param id:
+    :param cinder_id:
+    :param delete_clock:
+    :param delete_time:
+    :return:
+    """
 
     if delete_time is None:
         delete_time = datetime.now()
@@ -152,7 +160,9 @@ if __name__ == "__main__":
     #     write_iops=500
     # )
 
-    # print delete_volume(id=0, cinder_id="218485af-f6d4-44f9-ad6b-1ee98201568f")
+    print delete_volume(
+        id=0,
+        cinder_id="218485af-f6d4-44f9-ad6b-1ee98201568f")
 
     # insert_volume_performance_meter(
     #     experiment_id=1,
@@ -167,13 +177,13 @@ if __name__ == "__main__":
     #     sla_violation_id=0,
     #     io_test_output='')
 
-    insert_workload_generator(
-        tenant_id=1,
-        duration=1,
-        read_iops=1,
-        write_iops=1,
-        command="",
-        output="")
+    # insert_workload_generator(
+    #     tenant_id=1,
+    #     duration=1,
+    #     read_iops=1,
+    #     write_iops=1,
+    #     command="",
+    #     output="")
 
     # q = requests.get(__server_url, data={"zz": 12})
 

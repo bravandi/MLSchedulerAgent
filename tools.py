@@ -25,13 +25,12 @@ class Configs:
         pass
 
 
-
 def get_current_tenant_id():
-    if os.path.isfile("/root/tenantid") == False:
+    if os.path.isfile("~/tenantid") == False:
 
         return None
 
-    with open("/root/tenantid") as data_file:
+    with open("~/tenantid") as data_file:
         return data_file.read(36)
 
 # import json
