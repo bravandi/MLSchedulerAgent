@@ -50,7 +50,7 @@ class StorageWorkloadGenerator:
                 "   {run_f_test} Time: %s \ncommand: %s" %
                 (str(start_time), command))
 
-            out, err = tools.run_command([CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
+            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
 
             duration = tools.get_time_difference(start_time)
 
@@ -180,7 +180,7 @@ class CinderWorkloadGenerator:
         # make sure the device is ready to be mounted
         while True:
 
-            out, err = tools.run_command(["fdisk", "-l"], debug=False)
+            out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
 
             time.sleep(0.5)
 
@@ -189,13 +189,13 @@ class CinderWorkloadGenerator:
 
         # out = tools.run_command2("reset", debug=True)
 
-        out, err = tools.run_command(['mkfs', '-t', "ext3", device], debug=True)
+        out, err = tools.run_command(["sudo", 'mkfs', '-t', "ext3", device], debug=True)
 
         mount_to_path = base_path + volume.id
 
-        out, err = tools.run_command(['mkdir', mount_to_path])
+        out, err = tools.run_command(["sudo", 'mkdir', mount_to_path])
 
-        out, err = tools.run_command(['mount', device, mount_to_path], debug=True)
+        out, err = tools.run_command(["sudo", 'mount', device, mount_to_path], debug=True)
 
         # todo instead of 3 seconds
 
@@ -238,7 +238,7 @@ class CinderWorkloadGenerator:
             cinder.volumes.delete(cinder_volume_id)
 
             # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
-            tools.run_command(["rm", "-d", "-r", mount_path + cinder_volume_id])
+            tools.run_command(["sudo", "rm", "-d", "-r", mount_path + cinder_volume_id])
 
     def detach_delete_all_volumes(self, mount_path="/media/"):
         """
@@ -289,7 +289,7 @@ class CinderWorkloadGenerator:
                     cinder.volumes.delete(volume.id)
 
                     # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
-                    tools.run_command(["rm", "-d", "-r", mount_path + volume.id])
+                    tools.run_command(["sudo", "rm", "-d", "-r", mount_path + volume.id])
 
                     volumes.remove(volume)
 
@@ -303,7 +303,7 @@ class CinderWorkloadGenerator:
                 cinder.volumes.delete(volume.id)
 
 if __name__ == "__main__":
-
+    # pdb.set_trace()
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name="workload_generator.fio",

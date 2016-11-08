@@ -26,11 +26,12 @@ class Configs:
 
 
 def get_current_tenant_id():
-    if os.path.isfile("~/tenantid") == False:
+    path = os.path.expanduser("~/tenantid")
+    if os.path.isfile(path) == False:
 
         return None
 
-    with open("~/tenantid") as data_file:
+    with open(path) as data_file:
         return data_file.read(36)
 
 # import json
@@ -180,7 +181,7 @@ def create_sequential_folder(path, folder_name):
     :param folder_name: base name for the sequence of folders. For example 'vol_'
     :return:
     '''
-    out, err = run_command(['ls', path])
+    out, err = run_command(["sudo", 'ls', path])
 
     max_folder_count = 0
 
@@ -197,7 +198,7 @@ def create_sequential_folder(path, folder_name):
                     max_folder_count = int(split_folder[1])
 
     create_path = '/media/' + folder_name + str(max_folder_count + 1)
-    out, err = run_command(['mkdir', create_path])
+    out, err = run_command(["sudo", 'mkdir', create_path])
 
 def run_command(parameters, debug=False):
     # shell = spur.SshShell(
@@ -208,7 +209,8 @@ def run_command(parameters, debug=False):
     #
     # result = shell.run(["echo", "-n", "hello"])
     # print(result.output)  # prints hello
-
+    # if parameters[0] != "sudo":
+    #     parameters.insert(0, "sudo")
 
     p = subprocess.Popen(parameters,
                          # [fio_path, volume_path + fio_test_name],
@@ -242,7 +244,7 @@ def check_is_device_mounted_to_volume(volume_id):
     :param volume_id:
     :return: the device name if volume is mounted
     """
-    out, err = run_command(["df"], debug=False)
+    out, err = run_command(["sudo", "df"], debug=False)
 
     mounted = grep(out, volume_id, openstack=False)
 
@@ -266,7 +268,7 @@ def convert_string_datetime(input):
 
 
 def umount_device(device, debug= False):
-    out, err = run_command(["umount", "-f", "-l", device], debug=False)
+    out, err = run_command(["sudo", "umount", "-f", "-l", device], debug=False)
 
     if debug:
         print ("\nrun_command:\n" + "umount " + device + "\nOUT -->" + out)
