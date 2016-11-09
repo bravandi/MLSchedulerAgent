@@ -91,7 +91,7 @@ def insert_volume_performance_meter(
 
 def delete_volume(
         id=0,
-        cinder_id="",
+        cinder_id=None,
         delete_clock=0,
         delete_time=None):
     """
@@ -117,12 +117,14 @@ def delete_volume(
 
 
 def insert_workload_generator(
-        tenant_id,
+        experiment_id,
         duration,
         read_iops,
         write_iops,
         command,
         output,
+        tenant_id=0,
+        nova_id=None,
         create_clock=0,
         create_time=None):
 
@@ -130,7 +132,9 @@ def insert_workload_generator(
         create_time = datetime.now()
 
     data = {
+        "experiment_id": experiment_id,
         "tenant_id": tenant_id,
+        "nova_id": nova_id,
         "duration": duration,
         "read_iops": read_iops,
         "write_iops": write_iops,
@@ -227,7 +231,7 @@ if __name__ == "__main__":
     #     duration=1,
     #     read_iops=1,
     #     write_iops=1,
-    #     command="",
+    #     command=" ",
     #     output="")
 
     # q = requests.get(__server_url + "get_current_experiment", data={"zz": 12})

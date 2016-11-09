@@ -344,7 +344,5 @@ def grep(input, match = "", openstack = False):
 if __name__ == "__main__":
     # print backend_info.specifications
 
-    print (get_current_tenant_id())
-    print (len(get_current_tenant_id()))
-    print(len("2aac4553-7feb-4326-9028-bf923c3c88c3"))
+
     pass

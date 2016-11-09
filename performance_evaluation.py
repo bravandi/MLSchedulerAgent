@@ -97,7 +97,7 @@ class FIOTest:
 
         communication.insert_volume_performance_meter(
             experiment_id=PerformanceEvaluation.experiment["id"],
-            tenant_id=tools.get_current_tenant_id(),
+            nova_id=tools.get_current_tenant_id(),
             cinder_volume_id=test_instance.cinder_volume_id,
             read_iops=iops_measured["read"],
             write_iops=iops_measured["write"],

@@ -57,7 +57,8 @@ class StorageWorkloadGenerator:
             iops_measured = tools.get_iops_measures_from_fio_output(out)
 
             communication.insert_workload_generator(
-                tenant_id=tools.get_current_tenant_id(),
+                experiment_id=CinderWorkloadGenerator.experiment["id"],
+                nova_id=tools.get_current_tenant_id(),
                 duration=duration,
                 read_iops=iops_measured["read"],
                 write_iops=iops_measured["write"],
