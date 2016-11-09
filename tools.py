@@ -25,7 +25,17 @@ class Configs:
         pass
 
 
+_current_tenant_id = None
+
 def get_current_tenant_id():
+    """
+
+    :return: nova_id        VARCHAR(36)
+    """
+
+    if _current_tenant_id is not None:
+        return _current_tenant_id
+
     path = os.path.expanduser("~/tenantid")
     if os.path.isfile(path) == False:
 
@@ -33,6 +43,8 @@ def get_current_tenant_id():
 
     with open(path) as data_file:
         return data_file.read(36)
+
+_current_tenant_id = get_current_tenant_id()
 
 # import json
 # class Backend():

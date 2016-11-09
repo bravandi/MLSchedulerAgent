@@ -57,7 +57,7 @@ class StorageWorkloadGenerator:
             iops_measured = tools.get_iops_measures_from_fio_output(out)
 
             communication.insert_workload_generator(
-                tenant_id=1,
+                tenant_id=tools.get_current_tenant_id(),
                 duration=duration,
                 read_iops=iops_measured["read"],
                 write_iops=iops_measured["write"],
@@ -74,16 +74,26 @@ class StorageWorkloadGenerator:
 
 
 class CinderWorkloadGenerator:
-    fio_bin_path = "/root/fio-2.0.9/fio"
-    fio_tests_conf_path = "/root/MLSchedulerAgent/fio/"
+    fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
+    fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
+    experiment = communication.get_current_experiment()
     # storage_workload_generator_instances = []
 
-    def __init__(self, current_vm_id, fio_test_name, delay_between_workload_generation):
+    def __init__(self, workload_id, current_vm_id, fio_test_name, delay_between_workload_generation):
+        """
+
+        :param workload_id: if equal to 0 it will create new workload by capturing the current experiment requests
+        :param current_vm_id:
+        :param fio_test_name:
+        :param delay_between_workload_generation:
+        :return:
+        """
 
         self.current_vm_id = current_vm_id
         self.fio_test_name = fio_test_name
         self.delay_between_workload_generation = delay_between_workload_generation
+        self.workload_id = workload_id
 
     def run_storage_workload_generator(self):
 
@@ -124,7 +134,7 @@ class CinderWorkloadGenerator:
         '''
 
         id = communication.insert_volume_request(
-            workload_id=1,
+            experiment_id=CinderWorkloadGenerator.experiment["id"],
             capacity=size,
             type=0,
             read_iops=500,
@@ -133,7 +143,7 @@ class CinderWorkloadGenerator:
 
         cinder = tools.get_cinder_client()
 
-        volume = cinder.volumes.create(size, name=str(id))
+        volume = cinder.volumes.create(size, name="%s,%s" % (CinderWorkloadGenerator.experiment["id"], str(id)))
 
         # todo must call from scheduler it self
         # communication.add_volume(
@@ -206,8 +216,6 @@ class CinderWorkloadGenerator:
 
     def detach_volume(self, cinder_volume_id):
 
-        nova = tools.get_nova_client()
-
         device = tools.check_is_device_mounted_to_volume(cinder_volume_id)
 
         tools.umount_device(device)
@@ -216,10 +224,8 @@ class CinderWorkloadGenerator:
 
         if device == '':
             # detach volume
-            nova.volumes.delete_server_volume(self.current_vm_id, cinder_volume_id)
 
-            # consider if deletion fails then what to do...
-            communication.delete_volume(cinder_id=cinder_volume_id)
+            self._detach_volume(self.current_vm_id, cinder_volume_id)
 
         return device
 
@@ -237,8 +243,32 @@ class CinderWorkloadGenerator:
         if vol_reload.status == 'available':
             cinder.volumes.delete(cinder_volume_id)
 
+            communication.delete_volume(cinder_id=cinder_volume_id)
+
             # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
             tools.run_command(["sudo", "rm", "-d", "-r", mount_path + cinder_volume_id])
+
+    def _delete_volume(self, cinder_volume_id):
+        cinder = tools.get_cinder_client()
+
+        cinder.volumes.delete(cinder_volume_id)
+
+        communication.delete_volume(cinder_id=cinder_volume_id)
+
+    def _detach_volume(self, nova_id, volume):
+        cinder = tools.get_cinder_client()
+        nova = tools.get_nova_client()
+
+        if isinstance(volume, basestring):
+            volume_id = volume
+        else:
+            volume_id = volume.id
+
+        vol = cinder.volumes.get(volume_id)
+
+        if vol.status == "in-use":
+
+            nova.volumes.delete_server_volume(nova_id, volume_id)
 
     def detach_delete_all_volumes(self, mount_path="/media/"):
         """
@@ -266,7 +296,8 @@ class CinderWorkloadGenerator:
 
             if device == '':
 
-                nova.volumes.delete_server_volume(self.current_vm_id, volume.id)
+                self._detach_volume(self.current_vm_id, volume.id)
+
 
             # for any reason cannot umount therefor do not attempt to detach because it will mess the device value returned form the "nova volume-attach"
             else:
@@ -286,9 +317,8 @@ class CinderWorkloadGenerator:
                     continue
 
                 if vol_reload.status == 'available':
-                    cinder.volumes.delete(volume.id)
+                    self._delete_volume(volume.id)
 
-                    # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
                     tools.run_command(["sudo", "rm", "-d", "-r", mount_path + volume.id])
 
                     volumes.remove(volume)
@@ -300,11 +330,12 @@ class CinderWorkloadGenerator:
 
         for volume in cinder.volumes.list():
             if volume.status == 'available':
-                cinder.volumes.delete(volume.id)
+                self._delete_volume(volume.id)
 
 if __name__ == "__main__":
     # pdb.set_trace()
     wg = CinderWorkloadGenerator(
+        workload_id=0,
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name="workload_generator.fio",
         delay_between_workload_generation=0.5

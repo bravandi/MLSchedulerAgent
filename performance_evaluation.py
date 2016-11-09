@@ -96,8 +96,8 @@ class FIOTest:
         duration = tools.get_time_difference(last_start_time.value, last_end_time.value)
 
         communication.insert_volume_performance_meter(
-            experiment_id=1,
-            tenant_id=1,
+            experiment_id=PerformanceEvaluation.experiment["id"],
+            tenant_id=tools.get_current_tenant_id(),
             cinder_volume_id=test_instance.cinder_volume_id,
             read_iops=iops_measured["read"],
             write_iops=iops_measured["write"],
@@ -122,9 +122,10 @@ class FIOTest:
 
 class PerformanceEvaluation:
 
-    fio_bin_path = "/root/fio-2.0.9/fio"
-    fio_tests_conf_path = "/root/MLSchedulerAgent/fio/"
+    fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
+    fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
+    experiment = None
     f_test_instances = {}
 
     def __init__(self, fio_test_name, current_vm_id, terminate_if_takes, restart_gap, restart_gap_after_terminate):
@@ -134,6 +135,13 @@ class PerformanceEvaluation:
         self.terminate_if_takes = terminate_if_takes
         self.restart_gap = restart_gap
         self.restart_gap_after_terminate = restart_gap_after_terminate
+
+        PerformanceEvaluation.experiment = communication.get_current_experiment()
+
+        communication.insert_tenant(
+            experiment_id=PerformanceEvaluation.experiment["id"],
+            nova_id=tools.get_current_tenant_id()
+        )
 
         pass
 
@@ -163,8 +171,8 @@ class PerformanceEvaluation:
                 f_test.terminate(self.terminate_if_takes)
 
                 communication.insert_volume_performance_meter(
-                    experiment_id=1,
-                    tenant_id=1,
+                    experiment_id=PerformanceEvaluation.experiment["id"],
+                    nova_id=tools.get_current_tenant_id(),
                     cinder_volume_id=cinder_volume_id,
                     read_iops=0,
                     write_iops=0,
