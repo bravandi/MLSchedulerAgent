@@ -128,13 +128,14 @@ class PerformanceEvaluation:
     experiment = None
     f_test_instances = {}
 
-    def __init__(self, fio_test_name, current_vm_id, terminate_if_takes, restart_gap, restart_gap_after_terminate):
+    def __init__(self, fio_test_name, current_vm_id, terminate_if_takes, restart_gap, restart_gap_after_terminate, show_fio_output):
 
         self.fio_test_name = fio_test_name
         self.current_vm_id = current_vm_id
         self.terminate_if_takes = terminate_if_takes
         self.restart_gap = restart_gap
         self.restart_gap_after_terminate = restart_gap_after_terminate
+        self.show_fio_output = show_fio_output
 
         PerformanceEvaluation.experiment = communication.get_current_experiment()
 
@@ -156,7 +157,7 @@ class PerformanceEvaluation:
             f_test = FIOTest(test_path=test_path,
                              volume_path=volume_path,
                              cinder_volume_id=cinder_volume_id,
-                             show_output=True)
+                             show_output=self.show_fio_output)
 
             PerformanceEvaluation.f_test_instances[cinder_volume_id] = f_test
 
@@ -178,7 +179,7 @@ class PerformanceEvaluation:
                     write_iops=0,
                     duration=0,
                     terminate_wait=float(difference),
-                    io_test_output="")
+                    io_test_output="TERMINATED [terminate_if_takes: %s]" % str(self.terminate_if_takes))
 
         else:
 
@@ -236,7 +237,8 @@ if __name__ == "__main__":
         current_vm_id=tools.get_current_tenant_id(),
         terminate_if_takes=150,
         restart_gap=30,
-        restart_gap_after_terminate=50
+        restart_gap_after_terminate=50,
+        show_fio_output=False
     )
 
     p.run_fio_test()

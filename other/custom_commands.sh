@@ -11,15 +11,15 @@ function c_killProc(){
 #		echo $KILLPID
 #	done
 
-	ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
+	sudo ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
 function c_killPerformanceEvaluation(){
-	ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs kill -9
+	sudo ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
 function c_killWorkloadGenerator(){
-	ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs kill -9
+	sudo ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
 function cp_run(){
@@ -30,7 +30,7 @@ function cp_run(){
 	then
 	    #cp_print "$2 THEN" "$1";
 		# run in background by default
-		nohup $1  </dev/null &>/dev/null &
+		sudo nohup $1  </dev/null &>/dev/null &
 	else
 	    #cp_print "$2 ELSE" "$1";
 		eval "$1"
@@ -38,29 +38,30 @@ function cp_run(){
 }
 
 function c_getProc(){
-	ps aux | grep $1
+	sudo ps aux | grep $1
 }
 
 function c_getWorkloadGenerator(){
-	ps aux | grep workload_generator
+	sudo ps aux | grep workload_generator
+}
+
+function c_getPerformanceEvaluation(){
+	sudo ps aux | grep performance_evaluation
 }
 
 function c_source(){
 # todo fix this
-	source /root/commands.sh
+	source ~/MLSchedulerAgent/other/custom_commands.sh
 }
 
-function c_runWorkloadGenerator(){
-#/usr/bin/python
-    cv_cmd="/root/cinder/tools/with_venv.sh /root/cinder/.venv/bin/cinder-api --config-file=/root/cinder/.venv/etc/cinder/cinder.conf --log-file=/root/cinder/.venv/var/log/cinder/cinder-api.log"
-
-    cv_cmd="python /root/MLSchedulerAgent/workload_generator.py"
-
-	cp_run "$cv_cmd" $1
-}
+#function c_runPerformanceEvaluation(){
+#    cv_cmd="sudo python ~/MLSchedulerAgent/performance_evaluation.py"
+#
+#	cp_run "$cv_cmd" $1
+#}
 
 function cp_print(){
-    	printf "	$1 ${RED} $2 ${NC}\n"
+    printf "	$1 ${RED} $2 ${NC}\n"
 }
 
 function c_cdr_SL(){
