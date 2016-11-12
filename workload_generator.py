@@ -87,7 +87,7 @@ class StorageWorkloadGenerator:
 
 
 class CinderWorkloadGenerator:
-    fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
+    fio_bin_path = "fio" #os.path.expanduser("~/fio-2.0.9/fio")
     fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
     experiment = communication.get_current_experiment()
@@ -394,7 +394,9 @@ class CinderWorkloadGenerator:
             if len(volumes) < self.max_number_volumes:
 
                 volume_id = self.create_attach_volume()
+
                 workload_generator = wg.run_storage_workload_generator(volume_id)
+
                 volume_create_time = datetime.now()
 
                 volumes.append({
@@ -449,7 +451,7 @@ if __name__ == "__main__":
 
         wg.run_storage_workload_generator_all_volums()
 
-    else:
+    elif "start" in sys.argv:
         wg.start_simulation()
         # print communication.insert_volume_request(
         #     workload_id=1,
@@ -459,4 +461,6 @@ if __name__ == "__main__":
         #     write_iops=500
         # )
 
-        pass
+    else:
+
+        tools.log("Wrong command. check --help")
