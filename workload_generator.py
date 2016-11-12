@@ -87,7 +87,7 @@ class StorageWorkloadGenerator:
 
 
 class CinderWorkloadGenerator:
-    fio_bin_path = "fio" #os.path.expanduser("~/fio-2.0.9/fio")
+    fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
     fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
     experiment = communication.get_current_experiment()
