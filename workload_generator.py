@@ -1,7 +1,7 @@
+import argparse
 import os
 import tools
 import time
-import sys
 from multiprocessing import Process
 import multiprocessing
 import communication
@@ -415,43 +415,79 @@ class CinderWorkloadGenerator:
             time.sleep(0.5)
 
 if __name__ == "__main__":
-    # pdb.set_trace()
+
+    parser = argparse.ArgumentParser(description='Synthetic workload generator.')
+
+    parser.add_argument('commands', type=str, nargs='+',
+                        choices=['det-del', 'del-avail', 'start', 'storage', 'add'],
+                        help=
+"""define what is the main function command:
+[add -> attach and mount a new volume]
+[storage -> generatore fio workload only on the current attached volumes. If no volume, exit]
+[start -> start the simulation by constantly adding and removing volumes and simulate storage workload using fio]
+[del-avail -> deletes all available volums]
+[det-del -> detach and delete all volumes attached to the current server. Id --volume is given only detach and delete the single volume.]
+"""
+                        )
+
+    # parser.add_argument('--sum', dest='accumulate', action='store_const',
+    #                     const=sum, default=max,
+    #                     help='sum the integers (default: find the max)')
+
+    parser.add_argument('--fio_test_name', default="workload_generator.fio", metavar='', type=str,
+                        required=False,
+                        help='Test name for fio')
+
+    parser.add_argument('--delay_between_workload_generation', default=1, metavar='', type=float,
+                        required=False,
+                        help='wait before generation - seconds')
+
+    parser.add_argument('--max_number_volumes', default=3, metavar='', type=int, required=False,
+                        help='maximum number of volumes to be created')
+
+    parser.add_argument('--volume_life_seconds', default=360, type=int, metavar='', required=False,
+                        help='delete a volume after th specified second upon its creation.')
+
+    parser.add_argument('--volume', type=str, metavar='', required=False,
+                        help='Specify volume id to do operation on. For example for det-del a single volume.')
+
+    args = parser.parse_args()
+
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
-        fio_test_name="workload_generator.fio",
-        delay_between_workload_generation=0.5,
-        max_number_volumes=5,
-        volume_life_seconds=360
+
+        fio_test_name=args.fio_test_name,
+        delay_between_workload_generation=args.delay_between_workload_generation,
+        max_number_volumes=args.max_number_volumes,
+        volume_life_seconds=args.volume_life_seconds
     )
 
-    if "det-del" in sys.argv:
+    if "det-del" in args.commands:
 
-        if len(sys.argv) == 2:
-
-            wg.detach_delete_all_volumes()
+        if args.volume:
+            tools.log("det-del volume: %s" % args.volume)
+            wg.detach_delete_volume(args.volume)
 
         else:
+            tools.log("det-del all volumes")
+            wg.detach_delete_all_volumes()
 
-            wg.detach_delete_volume(sys.argv[2])
-
-        pass
-    elif "del-avail" in sys.argv:
+    elif "del-avail" in args.commands:
+        tools.log("delete all available volumes")
         wg.remove_all_available_volumes()
 
-    elif "add" in sys.argv:
-
+    elif "add" in args.commands:
+        tools.log("add,attach and mount a new volume")
         volume = wg.create_volume()
-
         attach_result = wg.attach_volume(wg.current_vm_id, volume.id)
-
         wg.mount_volume(attach_result.device, volume)
 
-    elif "storage" in sys.argv:
+    elif "storage" in args.commands:
         # volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"
 
         wg.run_storage_workload_generator_all_volums()
 
-    elif "start" in sys.argv:
+    elif "start" in args.commands:
         wg.start_simulation()
         # print communication.insert_volume_request(
         #     workload_id=1,
@@ -463,4 +499,4 @@ if __name__ == "__main__":
 
     else:
 
-        tools.log("Wrong command. check --help")
+        tools.log("Wrong command: %s. check --help" % sys.argv)

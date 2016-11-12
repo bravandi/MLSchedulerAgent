@@ -1,3 +1,4 @@
+import argparse
 import tools
 from datetime import datetime
 import communication
@@ -236,17 +237,45 @@ class PerformanceEvaluation:
 
         pass
 
+
+# print args.accumulate(args.integers)
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Volumes QoS performance evaluator.')
+
+    # parser.add_argument('integers', metavar='N', type=int, nargs='+',
+    #                     help='an integer for the accumulator')
+
+    # parser.add_argument('--sum', dest='accumulate', action='store_const',
+    #                     const=sum, default=max,
+    #                     help='sum the integers (default: find the max)')
+
+    parser.add_argument('--fio_test_name', default="resource_evaluation.fio", metavar='', type=str,
+                        required=False,
+                        help='Test name for fio')
+
+    parser.add_argument('--terminate_if_takes', metavar='', type=int, required=False, default=150,
+                        help='terminates an evaluation if takes more than specified seconds')
+
+    parser.add_argument('--restart_gap', metavar='', type=int, required=False, default=20,
+                        help='gap between restarting each fio test')
+
+    parser.add_argument('--restart_gap_after_terminate', metavar='', type=int, required=False, default=50,
+                        help='If terminated because of the TERMINATE_IF_TAKES, then restart after specified seconds')
+
+    parser.add_argument('--show_fio_output', type=bool, metavar='', required=False, default=False,
+                        help='show fio test output')
+
+    args = parser.parse_args()
 
     p = PerformanceEvaluation(
-        fio_test_name='resource_evaluation.fio',
         current_vm_id=tools.get_current_tenant_id(),
-        terminate_if_takes=150,
-        restart_gap=20,
-        restart_gap_after_terminate=50,
-        show_fio_output=False
+
+        fio_test_name=args.fio_test_name,
+        terminate_if_takes=args.terminate_if_takes,
+        restart_gap=args.restart_gap,
+        restart_gap_after_terminate=args.restart_gap_after_terminate,
+        show_fio_output=args.show_fio_output
     )
 
     p.run_fio_test()
-
-
