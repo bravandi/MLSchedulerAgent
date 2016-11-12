@@ -85,8 +85,13 @@ class FIOTest:
             "   {run_f_test} Time: %s \ncommand: %s" %
             (str(test_instance.last_start_time.value), PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
 
-        out, err = tools.run_command(
-            ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
+        try:
+
+            out, err = tools.run_command(
+                ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
+
+        except Exception as e:
+            test_instance.terminate()
 
         iops_measured = tools.get_iops_measures_from_fio_output(out)
 

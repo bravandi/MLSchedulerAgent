@@ -3,6 +3,7 @@ import tools
 import time
 import sys
 from multiprocessing import Process
+import multiprocessing
 import communication
 from datetime import datetime
 import pdb
@@ -36,6 +37,9 @@ class StorageWorkloadGenerator:
         #           (self.cinder_volume_id, self.last_start_time))
         self.proc.start()
 
+    def terminate(self):
+        self.proc.terminate()
+
     @staticmethod
     def run_workload_generator(generator_instance):
 
@@ -50,7 +54,14 @@ class StorageWorkloadGenerator:
                 "   {run_f_test} Time: %s \ncommand: %s" %
                 (str(start_time), command))
 
-            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
+            try:
+                out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
+            except Exception as e:
+                z = multiprocessing.current_process()
+
+                z.terminate()
+
+
 
             duration = tools.get_time_difference(start_time)
 
@@ -81,7 +92,12 @@ class CinderWorkloadGenerator:
     experiment = communication.get_current_experiment()
     # storage_workload_generator_instances = []
 
-    def __init__(self, workload_id, current_vm_id, fio_test_name, delay_between_workload_generation):
+    def __init__(self,
+                 workload_id,
+                 current_vm_id,
+                 fio_test_name,
+                 delay_between_workload_generation,
+                 max_number_volumes):
         """
 
         :param workload_id: if equal to 0 it will create new workload by capturing the current experiment requests
@@ -95,38 +111,45 @@ class CinderWorkloadGenerator:
         self.fio_test_name = fio_test_name
         self.delay_between_workload_generation = delay_between_workload_generation
         self.workload_id = workload_id
+        self.max_number_volumes = max_number_volumes
 
-    def run_storage_workload_generator(self):
+    def run_storage_workload_generator_all_volums(self):
 
         for volume in tools.get_all_attached_volumes(self.current_vm_id):
 
-            volume_path = "%s%s/" % (CinderWorkloadGenerator.mount_base_path, volume.id)
-            test_path = volume_path + self.fio_test_name
+            self.run_storage_workload_generator(volume.id)
 
-            generator = StorageWorkloadGenerator(
-                volume_id=volume.id,
-                workload_type="",
-                delay_between_generation=self.delay_between_workload_generation,
-                show_output=False,
-                test_path=test_path)
+    def run_storage_workload_generator(self, volume_id):
 
-            # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
+        volume_path = "%s%s/" % (CinderWorkloadGenerator.mount_base_path, volume_id)
+        test_path = volume_path + self.fio_test_name
 
-            if True or os.path.isfile(test_path) == False:
+        generator = StorageWorkloadGenerator(
+            volume_id=volume_id,
+            workload_type="",
+            delay_between_generation=self.delay_between_workload_generation,
+            show_output=False,
+            test_path=test_path)
 
-                with open(CinderWorkloadGenerator.fio_tests_conf_path + self.fio_test_name, 'r') as myfile:
-                    data = myfile.read().split('\n')
+        # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
 
-                    data[1] = "directory=" + volume_path
+        if True or os.path.isfile(test_path) == False:
 
-                    volume_test_file = open(test_path, 'w')
+            with open(CinderWorkloadGenerator.fio_tests_conf_path + self.fio_test_name, 'r') as myfile:
+                data = myfile.read().split('\n')
 
-                    for item in data:
-                        volume_test_file.write("%s\n" % item)
+                data[1] = "directory=" + volume_path
 
-                    volume_test_file.close()
+                volume_test_file = open(test_path, 'w')
 
-            generator.start()
+                for item in data:
+                    volume_test_file.write("%s\n" % item)
+
+                volume_test_file.close()
+
+        generator.start()
+
+        return generator
 
     def create_volume(self, size=1):
         '''
@@ -187,13 +210,11 @@ class CinderWorkloadGenerator:
         print ("mount_volume device: %s volume.id: %", device, volume.id)
 
 
-        # todo define a timeout
+        # todo define a timeout !important
         # make sure the device is ready to be mounted
         while True:
 
             out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
-
-            time.sleep(0.5)
 
             if device in out:
                 break
@@ -227,6 +248,10 @@ class CinderWorkloadGenerator:
             # detach volume
 
             self._detach_volume(self.current_vm_id, cinder_volume_id)
+
+        else:
+
+            raise Exception("[detach_volume] the volume is no unmounted volume_id: %s" % (cinder_volume_id))
 
         return device
 
@@ -270,6 +295,21 @@ class CinderWorkloadGenerator:
         if vol.status == "in-use":
 
             nova.volumes.delete_server_volume(nova_id, volume_id)
+
+        else:
+
+            raise Exception("volume status is no 'in-use' it is %s volume_id: %s" %
+                            (vol.status, volume_id))
+
+    def create_attach_volume(self):
+
+        volume = self.create_volume()
+
+        attach_result = self.attach_volume(wg.current_vm_id, volume.id)
+
+        self.mount_volume(attach_result.device, volume)
+
+        return volume.id
 
     def detach_delete_all_volumes(self, mount_path="/media/"):
         """
@@ -333,13 +373,44 @@ class CinderWorkloadGenerator:
             if volume.status == 'available':
                 self._delete_volume(volume.id)
 
+    def start_simulation(self):
+        self.detach_delete_all_volumes()
+
+        volumes = []
+
+        while True:
+
+            if len(volumes) < self.max_number_volumes:
+
+                volume_id = self.create_attach_volume()
+                workload_generator = wg.run_storage_workload_generator(volume_id)
+                volume_create_time = datetime.now()
+
+                volumes.append({
+                    "id": volume_id,
+                    "generator": workload_generator,
+                    "create_time": volume_create_time
+                })
+
+            for volume in volumes[:]:
+
+                if tools.get_time_difference(volume["create_time"]) > 600:
+                    volume["generator"].terminate()
+                    self.detach_delete_volume(volume["id"])
+                    volumes.remove(volume)
+
+                pass
+
+            time.sleep(0.5)
+
 if __name__ == "__main__":
     # pdb.set_trace()
     wg = CinderWorkloadGenerator(
         workload_id=0,
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name="workload_generator.fio",
-        delay_between_workload_generation=0.5
+        delay_between_workload_generation=0.5,
+        max_number_volumes=3
     )
 
     if "det-del" in sys.argv:
@@ -367,10 +438,10 @@ if __name__ == "__main__":
     elif "storage" in sys.argv:
         # volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"
 
-        wg.run_storage_workload_generator()
+        wg.run_storage_workload_generator_all_volums()
 
     else:
-
+        wg.start_simulation()
         # print communication.insert_volume_request(
         #     workload_id=1,
         #     capacity=1,

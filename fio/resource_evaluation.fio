@@ -11,7 +11,8 @@ bs=4k
 #iodepth=64
 iodepth=1
 
-size=300m
+size=10m
+#size=300m
 
 readwrite=randrw
 rwmixread=75
