@@ -143,6 +143,7 @@ class PerformanceEvaluation:
 
         communication.insert_tenant(
             experiment_id=PerformanceEvaluation.experiment["id"],
+            description=tools.get_current_tenant_description(),
             nova_id=tools.get_current_tenant_id()
         )
 

@@ -150,6 +150,7 @@ def insert_workload_generator(
 def insert_tenant(
         experiment_id,
         nova_id,
+        description,
         create_time=None):
 
     if create_time is None:
@@ -158,6 +159,7 @@ def insert_tenant(
     data = {
         "experiment_id": experiment_id,
         "nova_id": nova_id,
+        "description": description,
         "create_time": create_time
     }
 

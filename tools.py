@@ -46,6 +46,28 @@ def get_current_tenant_id():
 
 _current_tenant_id = get_current_tenant_id()
 
+
+_current_tenant_description = None
+
+def get_current_tenant_description():
+    """
+
+    :return: nova_id        VARCHAR(36)
+    """
+
+    if _current_tenant_description is not None:
+        return _current_tenant_description
+
+    path = os.path.expanduser("~/tenant_description")
+    if os.path.isfile(path) == False:
+
+        return None
+
+    with open(path) as data_file:
+        return data_file.read(36)
+
+_current_tenant_description = get_current_tenant_description()
+
 # import json
 # class Backend():
 #
