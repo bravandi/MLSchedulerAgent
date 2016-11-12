@@ -242,7 +242,7 @@ if __name__ == "__main__":
         fio_test_name='resource_evaluation.fio',
         current_vm_id=tools.get_current_tenant_id(),
         terminate_if_takes=150,
-        restart_gap=30,
+        restart_gap=20,
         restart_gap_after_terminate=50,
         show_fio_output=False
     )

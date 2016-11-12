@@ -418,8 +418,8 @@ if __name__ == "__main__":
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name="workload_generator.fio",
         delay_between_workload_generation=0.5,
-        max_number_volumes=3,
-        volume_life_seconds=60
+        max_number_volumes=5,
+        volume_life_seconds=360
     )
 
     if "det-del" in sys.argv:
