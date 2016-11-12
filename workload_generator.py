@@ -375,6 +375,8 @@ class CinderWorkloadGenerator:
 
                     volumes.remove(volume)
 
+        tools.run_command(["sudo", "rm", "-d", "-r", mount_path])
+
     def remove_all_available_volumes(self):
         print("remove_all_available_volumes()")
 
