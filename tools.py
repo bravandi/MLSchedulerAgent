@@ -90,8 +90,8 @@ _current_tenant_id = get_current_tenant_id()
 def get_iops_measures_from_fio_output(out):
 
     iops_measured = {
-        "read": -1,
-        "write": -1
+        "read": -2,
+        "write": -2
     }
 
     for line in grep(out, "iops"):
@@ -341,8 +341,38 @@ def grep(input, match = "", openstack = False):
 
     return output
 
+
+def get_mounted_devices(match="vd", debug=False):
+    result = set()
+
+    out, err = run_command(["sudo", "df"], debug=debug)
+    t = grep(out, match)
+
+    for i in t:
+        spl = i.split(' ')
+        result.add(spl[0])
+
+    return result
+
+
+def get_attached_devices(match="vd", debug=False):
+    result = set()
+
+    out, err = run_command(["sudo", "fdisk", "-l"], debug=debug)
+
+    t = grep(out, match)
+
+    for i in t:
+
+        spl = i.split(' ')
+        tmp = spl[1]
+
+        if tmp != '':
+            result.add(tmp[:len(tmp) - 1])
+
+    return result
+
 if __name__ == "__main__":
-    # print backend_info.specifications
 
-
+    print(get_attached_devices())
     pass

@@ -85,13 +85,9 @@ class FIOTest:
             "   {run_f_test} Time: %s \ncommand: %s" %
             (str(test_instance.last_start_time.value), PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
 
-        try:
 
-            out, err = tools.run_command(
-                ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
-
-        except Exception as e:
-            test_instance.terminate()
+        out, err = tools.run_command(
+            ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
 
         iops_measured = tools.get_iops_measures_from_fio_output(out)
 
@@ -201,6 +197,11 @@ class PerformanceEvaluation:
 
             # if terminated wait for 4 seconds then start the process
             if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < self.restart_gap_after_terminate:
+                return
+
+            # if volume is attached but not mounted yet, or the volume is detached
+            if os.path.isdir(volume_path) == False:
+                PerformanceEvaluation.f_test_instances.pop(cinder_volume_id)
                 return
 
             # make sure the test file [*.fio] exists

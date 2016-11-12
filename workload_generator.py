@@ -12,18 +12,18 @@ class StorageWorkloadGenerator:
     """
 
     """
-    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_generation=1.0):
+    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_workload_generation=1.0):
         """
 
         :param workload_type:
-        :param delay_between_generation:
+        :param delay_between_workload_generation:
         :return:
         """
 
         # threading.Thread.__init__(self)
         self.volume_id = volume_id
         self.workload_type = workload_type
-        self.delay_between_simulator = delay_between_generation
+        self.delay_between_workload_generation = delay_between_workload_generation
         self.proc = None
         self.show_output = show_output
         self.test_path = test_path
@@ -49,19 +49,20 @@ class StorageWorkloadGenerator:
 
             command = CinderWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
 
+            # z.terminate()
             # command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % generator_instance.volume_id
             tools.log(
                 "   {run_f_test} Time: %s \ncommand: %s" %
                 (str(start_time), command))
 
-            try:
-                out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
-            except Exception as e:
-                z = multiprocessing.current_process()
+            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
 
-                z.terminate()
+            if err != "":
+                tools.log(
+                    "   {ERROR} Time: %s\nVOLUME: %s\nERROR: %s" %
+                    (str(start_time), generator_instance.volume_id, err))
 
-
+                break
 
             duration = tools.get_time_difference(start_time)
 
@@ -82,7 +83,7 @@ class StorageWorkloadGenerator:
             tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
                    (str(duration), str(iops_measured), generator_instance.volume_id, out, err))
 
-            time.sleep(generator_instance.delay_between_simulator)
+            time.sleep(generator_instance.delay_between_workload_generation)
 
 
 class CinderWorkloadGenerator:
@@ -93,11 +94,12 @@ class CinderWorkloadGenerator:
     # storage_workload_generator_instances = []
 
     def __init__(self,
-                 workload_id,
                  current_vm_id,
                  fio_test_name,
                  delay_between_workload_generation,
-                 max_number_volumes):
+                 max_number_volumes,
+                 volume_life_seconds,
+                 workload_id=0):
         """
 
         :param workload_id: if equal to 0 it will create new workload by capturing the current experiment requests
@@ -112,6 +114,7 @@ class CinderWorkloadGenerator:
         self.delay_between_workload_generation = delay_between_workload_generation
         self.workload_id = workload_id
         self.max_number_volumes = max_number_volumes
+        self.volume_life_seconds = volume_life_seconds
 
     def run_storage_workload_generator_all_volums(self):
 
@@ -127,7 +130,7 @@ class CinderWorkloadGenerator:
         generator = StorageWorkloadGenerator(
             volume_id=volume_id,
             workload_type="",
-            delay_between_generation=self.delay_between_workload_generation,
+            delay_between_workload_generation=self.delay_between_workload_generation,
             show_output=False,
             test_path=test_path)
 
@@ -202,22 +205,30 @@ class CinderWorkloadGenerator:
     def mount_volume(self, device, volume, base_path="/media/"):
         '''
 
-        :param device:
+        :param device: not used because openstack returns wrong device sometimes. So, nby comparing fdisk -l it finds the latest attached device
         :param volume: it must be an instance of volume object in the cinderclient
         :return:
         '''
 
         print ("mount_volume device: %s volume.id: %", device, volume.id)
 
+        already_attached_devices = tools.get_attached_devices()
 
         # todo define a timeout !important
         # make sure the device is ready to be mounted
         while True:
+            new_device = tools.get_attached_devices() - already_attached_devices
 
-            out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
-
-            if device in out:
+            if len(new_device) > 0:
+                if len(new_device) > 1:
+                    raise Exception("two devices attached at the same time, cannot identiify which one should be mounted to which voilume")
+                device = new_device.pop()
                 break
+
+            # out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
+            #
+            # if device in out:
+            #     break
 
         # out = tools.run_command2("reset", debug=True)
 
@@ -394,23 +405,21 @@ class CinderWorkloadGenerator:
 
             for volume in volumes[:]:
 
-                if tools.get_time_difference(volume["create_time"]) > 600:
+                if tools.get_time_difference(volume["create_time"]) > self.volume_life_seconds:
                     volume["generator"].terminate()
                     self.detach_delete_volume(volume["id"])
                     volumes.remove(volume)
-
-                pass
 
             time.sleep(0.5)
 
 if __name__ == "__main__":
     # pdb.set_trace()
     wg = CinderWorkloadGenerator(
-        workload_id=0,
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name="workload_generator.fio",
         delay_between_workload_generation=0.5,
-        max_number_volumes=3
+        max_number_volumes=3,
+        volume_life_seconds=60
     )
 
     if "det-del" in sys.argv:
