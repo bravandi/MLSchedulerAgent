@@ -99,6 +99,7 @@ class CinderWorkloadGenerator:
                  delay_between_workload_generation,
                  max_number_volumes,
                  volume_life_seconds,
+                 volume_size,
                  workload_id=0):
         """
 
@@ -114,6 +115,7 @@ class CinderWorkloadGenerator:
         self.delay_between_workload_generation = delay_between_workload_generation
         self.workload_id = workload_id
         self.max_number_volumes = max_number_volumes
+        self.volume_size = volume_size
         self.volume_life_seconds = volume_life_seconds
 
     def run_storage_workload_generator_all_volums(self):
@@ -154,11 +156,14 @@ class CinderWorkloadGenerator:
 
         return generator
 
-    def create_volume(self, size=1):
+    def create_volume(self, size=None):
         '''
 
         :return: returns volume object
         '''
+
+        if size is None:
+            size = self.volume_size
 
         id = communication.insert_volume_request(
             experiment_id=CinderWorkloadGenerator.experiment["id"],
@@ -453,6 +458,9 @@ if __name__ == "__main__":
     parser.add_argument('--volume', type=str, metavar='', required=False,
                         help='Specify volume id to do operation on. For example for det-del a single volume.')
 
+    parser.add_argument('--volume_size', default=2, type=int, metavar='', required=False,
+                        help='Specify volume id to do operation on. For example for det-del a single volume.')
+
     args = parser.parse_args()
 
     wg = CinderWorkloadGenerator(
@@ -461,7 +469,8 @@ if __name__ == "__main__":
         fio_test_name=args.fio_test_name,
         delay_between_workload_generation=args.delay_between_workload_generation,
         max_number_volumes=args.max_number_volumes,
-        volume_life_seconds=args.volume_life_seconds
+        volume_life_seconds=args.volume_life_seconds,
+        volume_size=args.volume_size
     )
 
     if "det-del" in args.commands:

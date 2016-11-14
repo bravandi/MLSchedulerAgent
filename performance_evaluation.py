@@ -193,11 +193,11 @@ class PerformanceEvaluation:
             #     tools.log("  ***[f_test.last_end_time DIFFERENCE] %s" %
             #               str(tools.get_time_difference(last_end_time)))
 
-            # have 40 seconds gap between restarting the tests
+            # have xx seconds gap between restarting the tests
             if last_end_time is not None and tools.get_time_difference(last_end_time) < self.restart_gap:
                 return
 
-            # if terminated wait for 4 seconds then start the process
+            # if terminated wait for xx seconds then start the process
             if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < self.restart_gap_after_terminate:
                 return
 
