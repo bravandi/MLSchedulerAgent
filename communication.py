@@ -1,8 +1,44 @@
 import requests
 import json
 from datetime import datetime
+import sys
 import pdb
+
 __server_url = 'http://CinderDevelopmentEnv:8888/'
+
+_current_experiment = None
+
+
+def get_current_experiment():
+    if _current_experiment is not None:
+        return _current_experiment
+
+    ex = requests.get(__server_url + "get_current_experiment")
+
+    ex = json.loads(ex.text)
+    ex["config"] = json.loads(ex["config"])
+
+    return ex
+
+_current_experiment = get_current_experiment()
+
+
+def clock_calc(t=datetime.now()):
+    return None
+    if(t.second > 30):
+        t = t.replace(second=30)
+    else:
+        t = t.replace(second=0)
+    t = t.replace(microsecond=0)
+    return t.strftime("%s")
+
+try:
+    # pdb.set_trace()
+    exec(_current_experiment["config"]["clock_calc"])
+except:
+    print("Error an executing the experiment calculate clock function.")
+    # sys.exit(1)
+
 
 def insert_volume_request(
         capacity,
@@ -74,11 +110,8 @@ def insert_volume_performance_meter(
         create_time = datetime.now()
 
     if create_clock == 0:
-        config = get_current_experiment()["config"]
-        t = create_time
 
-        print ("script: %s", config)
-        create_clock = eval(config["clock_calc"])
+        create_clock = clock_calc(create_time)
 
     data = {
         "experiment_id": experiment_id,
@@ -175,23 +208,6 @@ def insert_tenant(
     }
 
     return _parse_response(requests.post(__server_url + "insert_tenant", data=data))
-
-_current_experiment = None
-
-
-def get_current_experiment():
-    if _current_experiment is not None:
-        return _current_experiment
-
-    ex = requests.get(__server_url + "get_current_experiment")
-
-    ex = json.loads(ex.text)
-    ex["config"] = json.loads(ex["config"])
-
-    return ex
-
-
-_current_experiment = get_current_experiment()
 
 
 def _parse_response(response):
