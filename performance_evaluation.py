@@ -99,6 +99,7 @@ class FIOTest:
 
         communication.insert_volume_performance_meter(
             experiment_id=PerformanceEvaluation.experiment["id"],
+            sla_violation_id=1, #1 means no violation
             nova_id=tools.get_current_tenant_id(),
             cinder_volume_id=test_instance.cinder_volume_id,
             read_iops=iops_measured["read"],

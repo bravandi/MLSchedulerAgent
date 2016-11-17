@@ -43,12 +43,12 @@ def insert_volume_performance_meter(
         tenant_id=0,
         volume_id=0,
         backend_id=0,
-        sla_violation_id=0,
+        sla_violation_id=1,
         terminate_wait=0,
         create_clock=0,
         create_time=None):
     """
-
+    if tenant_id is 0 then the procedure will use nova_id to find the tenant id
     :param experiment_id:
     :param nova_id: if tenant_id is 0 then the procedure will use nova_id to find the tenant id
     :param cinder_volume_id:
@@ -60,6 +60,10 @@ def insert_volume_performance_meter(
     :param volume_id:
     :param backend_id:
     :param sla_violation_id:
+        1: not violated
+        2: read_IOPS violated
+        3: write_IOPS violated
+        4: both read and write IOPS violated
     :param terminate_wait:
     :param create_clock:
     :param create_time:
@@ -68,6 +72,13 @@ def insert_volume_performance_meter(
 
     if create_time is None:
         create_time = datetime.now()
+
+    if create_clock == 0:
+        config = get_current_experiment()["config"]
+        t = create_time
+
+        print ("script: %s", config)
+        create_clock = eval(config["clock_calc"])
 
     data = {
         "experiment_id": experiment_id,
@@ -165,11 +176,23 @@ def insert_tenant(
 
     return _parse_response(requests.post(__server_url + "insert_tenant", data=data))
 
+_current_experiment = None
+
 
 def get_current_experiment():
+    if _current_experiment is not None:
+        return _current_experiment
+
     ex = requests.get(__server_url + "get_current_experiment")
 
-    return json.loads(ex.text)
+    ex = json.loads(ex.text)
+    ex["config"] = json.loads(ex["config"])
+
+    return ex
+
+
+_current_experiment = get_current_experiment()
+
 
 def _parse_response(response):
 
