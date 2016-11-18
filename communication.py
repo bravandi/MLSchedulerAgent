@@ -79,7 +79,7 @@ def insert_volume_performance_meter(
         tenant_id=0,
         volume_id=0,
         backend_id=0,
-        sla_violation_id=1,
+        sla_violation_id=0,
         terminate_wait=0,
         create_clock=0,
         create_time=None):
@@ -95,7 +95,7 @@ def insert_volume_performance_meter(
     :param tenant_id:
     :param volume_id:
     :param backend_id:
-    :param sla_violation_id:
+    :param sla_violation_id: this parameter is ignored in the stored procedure. It is handled in the database.
         1: not violated
         2: read_IOPS violated
         3: write_IOPS violated
