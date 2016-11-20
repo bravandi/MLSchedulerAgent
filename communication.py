@@ -23,22 +23,26 @@ def get_current_experiment():
 _current_experiment = get_current_experiment()
 
 
-def clock_calc(t=datetime.now()):
+def volume_performance_meter_clock_calc(t=datetime.now()):
     return None
-    if(t.second > 30):
-        t = t.replace(second=30)
-    else:
-        t = t.replace(second=0)
-    t = t.replace(microsecond=0)
+
+try:
+    # define the function from the database
+    exec(_current_experiment["config"]["volume_performance_meter_clock_calc"])
+except:
+    print("Error an executing the experiment VOLUME_PERFORMANCE_METER calculate clock function.")
+    # sys.exit(1)
+
+
+def volume_clock_calc(t):
     return t.strftime("%s")
 
 try:
-    # pdb.set_trace()
-    exec(_current_experiment["config"]["clock_calc"])
+    # define the function from the database
+    exec(_current_experiment["config"]["volume_clock_calc"])
 except:
-    print("Error an executing the experiment calculate clock function.")
+    print("Error an executing the experiment VOLUME calculate clock function.")
     # sys.exit(1)
-
 
 def insert_volume_request(
         capacity,
@@ -110,8 +114,7 @@ def insert_volume_performance_meter(
         create_time = datetime.now()
 
     if create_clock == 0:
-
-        create_clock = clock_calc(create_time)
+        create_clock = volume_performance_meter_clock_calc(create_time)
 
     data = {
         "experiment_id": experiment_id,
@@ -149,6 +152,8 @@ def delete_volume(
 
     if delete_time is None:
         delete_time = datetime.now()
+
+    delete_clock = volume_clock_calc()
 
     data = {
         "id": id,
