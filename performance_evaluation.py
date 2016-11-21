@@ -140,7 +140,7 @@ class PerformanceEvaluation:
         self.restart_gap_after_terminate = restart_gap_after_terminate
         self.show_fio_output = show_fio_output
 
-        PerformanceEvaluation.experiment = communication.get_current_experiment()
+        PerformanceEvaluation.experiment = communication.Communication.get_current_experiment()
 
         communication.insert_tenant(
             experiment_id=PerformanceEvaluation.experiment["id"],

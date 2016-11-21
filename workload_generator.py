@@ -7,6 +7,7 @@ import multiprocessing
 import communication
 from datetime import datetime
 import pdb
+import numpy as np
 
 class StorageWorkloadGenerator:
     """
@@ -90,7 +91,7 @@ class CinderWorkloadGenerator:
     fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
     fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
-    experiment = communication.get_current_experiment()
+    experiment = communication.Communication.get_current_experiment()
     # storage_workload_generator_instances = []
 
     def __init__(self,
@@ -100,6 +101,8 @@ class CinderWorkloadGenerator:
                  max_number_volumes,
                  volume_life_seconds,
                  volume_size,
+                 request_read_iops,
+                 request_write_iops,
                  workload_id=0):
         """
 
@@ -110,6 +113,8 @@ class CinderWorkloadGenerator:
         :return:
         """
 
+        self.request_read_iops = request_read_iops
+        self.request_write_iops = request_write_iops
         self.current_vm_id = current_vm_id
         self.fio_test_name = fio_test_name
         self.delay_between_workload_generation = delay_between_workload_generation
@@ -165,12 +170,15 @@ class CinderWorkloadGenerator:
         if size is None:
             size = self.volume_size
 
+        read_iops = np.random.choice(self.request_read_iops, 1, p=[0.5, 0.3, 0.2])
+        write_iops = np.random.choice(self.request_write_iops, 1, p=[0.5, 0.3, 0.2])
+
         id = communication.insert_volume_request(
             experiment_id=CinderWorkloadGenerator.experiment["id"],
             capacity=size,
             type=0,
-            read_iops=500,
-            write_iops=500
+            read_iops=read_iops,
+            write_iops=write_iops
         )
 
         cinder = tools.get_cinder_client()
@@ -474,6 +482,8 @@ if __name__ == "__main__":
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
 
+        request_read_iops=[500, 750, 1000],
+        request_write_iops=[300, 400, 500],
         fio_test_name=args.fio_test_name,
         delay_between_workload_generation=args.delay_between_workload_generation,
         max_number_volumes=args.max_number_volumes,

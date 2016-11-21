@@ -6,21 +6,28 @@ import pdb
 
 __server_url = 'http://CinderDevelopmentEnv:8888/'
 
-_current_experiment = None
 
+class Communication:
+    _current_experiment = None
+    __server_url = 'http://10.18.75.100:8888/'
 
-def get_current_experiment():
-    if _current_experiment is not None:
-        return _current_experiment
+    @staticmethod
+    def get_current_experiment():
+        if Communication._current_experiment is not None:
+            return Communication._current_experiment
 
-    ex = requests.get(__server_url + "get_current_experiment")
+        ex = requests.get(Communication.__server_url + "get_current_experiment")
 
-    ex = json.loads(ex.text)
-    ex["config"] = json.loads(ex["config"])
+        try:
+            ex = json.loads(ex.text)
+        except Exception as err:
+            return None
 
-    return ex
+        ex["config"] = json.loads(ex["config"])
 
-_current_experiment = get_current_experiment()
+        Communication._current_experiment = ex
+
+        return Communication._current_experiment
 
 
 def volume_performance_meter_clock_calc(t=datetime.now()):
@@ -28,7 +35,7 @@ def volume_performance_meter_clock_calc(t=datetime.now()):
 
 try:
     # define the function from the database
-    exec(_current_experiment["config"]["volume_performance_meter_clock_calc"])
+    exec(Communication.get_current_experiment()["config"]["volume_performance_meter_clock_calc"])
 except:
     print("Error an executing the experiment VOLUME_PERFORMANCE_METER calculate clock function.")
     # sys.exit(1)
@@ -39,7 +46,7 @@ def volume_clock_calc(t):
 
 try:
     # define the function from the database
-    exec(_current_experiment["config"]["volume_clock_calc"])
+    exec(Communication.get_current_experiment()["config"]["volume_clock_calc"])
 except:
     print("Error an executing the experiment VOLUME calculate clock function.")
     # sys.exit(1)
@@ -259,18 +266,18 @@ if __name__ == "__main__":
     #     id=0,
     #     cinder_id="218485af-f6d4-44f9-ad6b-1ee98201568f")
 
-    insert_volume_performance_meter(
-        experiment_id=1,
-        nova_id="38b4d2ba-7421-4c00-9d0a-ad84137eee26",
-        backend_id=0,
-        volume_id=0,
-        cinder_volume_id='b0705326-375d-4839-b467-a0545a312c92',
-        read_iops=500,
-        write_iops=500,
-        duration=7.68,
-        terminate_wait=0,
-        sla_violation_id=0,
-        io_test_output='')
+    # insert_volume_performance_meter(
+    #     experiment_id=1,
+    #     nova_id="38b4d2ba-7421-4c00-9d0a-ad84137eee26",
+    #     backend_id=0,
+    #     volume_id=0,
+    #     cinder_volume_id='b0705326-375d-4839-b467-a0545a312c92',
+    #     read_iops=500,
+    #     write_iops=500,
+    #     duration=7.68,
+    #     terminate_wait=0,
+    #     sla_violation_id=0,
+    #     io_test_output='')
 
     # insert_workload_generator(
     #     tenant_id=1,
@@ -282,7 +289,7 @@ if __name__ == "__main__":
 
     # q = requests.get(__server_url + "get_current_experiment", data={"zz": 12})
 
-    # print get_current_experiment()["id"]
+    # print Communication.get_current_experiment()()["id"]
 
     # insert_tenant(
     #     experiment_id=1,
