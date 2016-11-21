@@ -20,10 +20,10 @@ class Communication:
 
         try:
             ex = json.loads(ex.text)
+
+            ex["config"] = json.loads(ex["config"])
         except Exception as err:
             return None
-
-        ex["config"] = json.loads(ex["config"])
 
         Communication._current_experiment = ex
 
