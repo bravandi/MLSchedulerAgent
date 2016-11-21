@@ -303,7 +303,7 @@ def convert_string_datetime(input):
     if input == '':
         return None
     else:
-        return datetime.strptime(input.split('.'[0]), "%Y-%m-%d %H:%M:%S")
+        return datetime.strptime(input.split('.')[0], "%Y-%m-%d %H:%M:%S")
 
 
 def umount_device(device, debug= False):
