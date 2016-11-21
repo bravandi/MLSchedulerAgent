@@ -321,7 +321,7 @@ class CinderWorkloadGenerator:
         try:
             vol = cinder.volumes.get(volume_id)
         except Exception as err:
-            tools.log("\nERROR [_detach_volume] attemp tp delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(err))
+            tools.log("ERROR [_detach_volume] attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(err))
             return "volume-not-exists"
 
 
@@ -385,8 +385,15 @@ class CinderWorkloadGenerator:
         while len(volumes) > 0:
 
             for volume in volumes[:]:
-                'Detaching'
-                vol_reload = cinder.volumes.get(volume.id)
+                # Detaching
+                try:
+                    vol_reload = cinder.volumes.get(volume.id)
+                except Exception as err:
+                    tools.log(
+                        "ERROR [detach_delete_all_volumes] attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(
+                            err))
+                    volumes.remove(volume)
+                    continue
 
                 if vol_reload.status == 'detaching' or vol_reload.status == 'deleting':
 

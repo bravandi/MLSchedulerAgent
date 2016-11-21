@@ -131,7 +131,7 @@ def get_iops_measures_from_fio_output(out):
 
 def log(message, debug=False):
 
-    print ("\n" + message)
+    print ("\n" + message + "\n")
 
 
 def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path="/media"):
