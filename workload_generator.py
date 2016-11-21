@@ -274,11 +274,12 @@ class CinderWorkloadGenerator:
         if device == '':
             # detach volume
 
-            self._detach_volume(self.current_vm_id, cinder_volume_id)
+            if self._detach_volume(self.current_vm_id, cinder_volume_id) == "volume-not-exists":
+                pass
 
         else:
 
-            raise Exception("[detach_volume] the volume is no unmounted volume_id: %s" % (cinder_volume_id))
+            raise Exception("[detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
 
         return device
 
@@ -317,7 +318,12 @@ class CinderWorkloadGenerator:
         else:
             volume_id = volume.id
 
-        vol = cinder.volumes.get(volume_id)
+        try:
+            vol = cinder.volumes.get(volume_id)
+        except Exception as err:
+            tools.log("\nERROR [_detach_volume] attemp tp delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(err))
+            return "volume-not-exists"
+
 
         if vol.status == "in-use":
 
