@@ -192,6 +192,10 @@ def cinder_wait_for_volume_status(volume_id, status, timeout = 0):
 
         vol_reload = cinder.volumes.get(volume_id)
 
+        if vol_reload.status == "error":
+
+            return False
+
         if vol_reload.status == status:
 
             return True

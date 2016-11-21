@@ -197,7 +197,10 @@ class CinderWorkloadGenerator:
         '''
 
         # wait until the volume is ready
-        tools.cinder_wait_for_volume_status(volume_id, status="available")
+        if tools.cinder_wait_for_volume_status(volume_id, status="available") is False:
+            self._delete_volume(volume_id)
+            tools.log("VOLUME DELETED because status is 'error' id: %s" % volume_id)
+            return None
 
         print ("attach_volume instance_id=%s volume_id=%s", instance_id, volume_id)
 
@@ -323,7 +326,9 @@ class CinderWorkloadGenerator:
 
         attach_result = self.attach_volume(wg.current_vm_id, volume.id)
 
-        self.mount_volume(attach_result.device, volume)
+        if attach_result is not None:
+
+            self.mount_volume(attach_result.device, volume)
 
         return volume.id
 
@@ -401,6 +406,9 @@ class CinderWorkloadGenerator:
             if len(volumes) < self.max_number_volumes:
 
                 volume_id = self.create_attach_volume()
+
+                if volume_id is None:
+                    continue
 
                 workload_generator = wg.run_storage_workload_generator(volume_id)
 
@@ -491,7 +499,9 @@ if __name__ == "__main__":
         tools.log("add,attach and mount a new volume")
         volume = wg.create_volume()
         attach_result = wg.attach_volume(wg.current_vm_id, volume.id)
-        wg.mount_volume(attach_result.device, volume)
+
+        if attach_result is not None:
+            wg.mount_volume(attach_result.device, volume)
 
     elif "storage" in args.commands:
         # volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"

@@ -153,7 +153,7 @@ def delete_volume(
     if delete_time is None:
         delete_time = datetime.now()
 
-    delete_clock = volume_clock_calc()
+    delete_clock = volume_clock_calc(delete_time)
 
     data = {
         "id": id,
