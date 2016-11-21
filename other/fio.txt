@@ -20,3 +20,12 @@ I guess the best is:
 
 --section allows choosing jobs
 /root/fio-2.0.9/fio --section=job1 --section=job2 /media/513af203-e66f-4477-9e8e-fd0338b759ea/basic.fio
+
+
+{EXECUTE 10.18.75.185} sudo nohup python ~/MLSchedulerAgent/workload_generator.py start --max_number_volumes 6 --delay_between_workload_generation 8 --volume_life_seconds 500 --fio_test_name workload_generator.fio --volume_size 9 >~/workload.out 2>~/workload.err &
+
+     [RESPONSE 10.18.75.185] OUT: []
+     RETVAL:0   ERR:[]
+
+{EXECUTE 10.18.75.185} sudo nohup python ~/MLSchedulerAgent/performance_evaluation.py --restart_gap_after_terminate 50 --terminate_if_takes 175 --show_fio_output False --fio_test_name resource_evaluation.fio --restart_gap 25 >~/performance_evaluation.out 2>~/performance_evaluation.err &
+

@@ -94,7 +94,6 @@ class FIOTest:
 
         # print "test_instance.last_end_time:" + last_end_time.value
         last_end_time.value = str(datetime.now())
-
         duration = tools.get_time_difference(last_start_time.value, last_end_time.value)
 
         communication.insert_volume_performance_meter(
@@ -109,7 +108,7 @@ class FIOTest:
 
         # todo have switch for either saving test results or not
         # if False:
-        #     out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S.%f"), 'w')
+        #     out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S"), 'w')
         #     out_file.write(out)
         #     out_file.close()
 
