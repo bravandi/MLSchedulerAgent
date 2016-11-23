@@ -3,16 +3,18 @@ import os
 import tools
 import time
 from multiprocessing import Process
-import multiprocessing
+import json
 import communication
 from datetime import datetime
 import pdb
 import numpy as np
 
+
 class StorageWorkloadGenerator:
     """
 
     """
+
     def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_workload_generation=1.0):
         """
 
@@ -56,7 +58,8 @@ class StorageWorkloadGenerator:
                 "   {run_f_test} Time: %s \ncommand: %s" %
                 (str(start_time), command))
 
-            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path], debug=False)
+            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
+                                         debug=False)
 
             if err != "":
                 tools.log(
@@ -82,9 +85,13 @@ class StorageWorkloadGenerator:
                 out = "SHOW_OUTPUT = False"
 
             tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                   (str(duration), str(iops_measured), generator_instance.volume_id, out, err))
+                      (str(duration), str(iops_measured), generator_instance.volume_id, out, err))
 
-            time.sleep(generator_instance.delay_between_workload_generation)
+            time.sleep(np.random.choice(
+                generator_instance.delay_between_workload_generation[0],
+                1,
+                p=generator_instance.delay_between_workload_generation[1]
+            ))
 
 
 class CinderWorkloadGenerator:
@@ -92,6 +99,7 @@ class CinderWorkloadGenerator:
     fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
     experiment = communication.Communication.get_current_experiment()
+
     # storage_workload_generator_instances = []
 
     def __init__(self,
@@ -126,7 +134,6 @@ class CinderWorkloadGenerator:
     def run_storage_workload_generator_all_volums(self):
 
         for volume in tools.get_all_attached_volumes(self.current_vm_id):
-
             self.run_storage_workload_generator(volume.id)
 
     def run_storage_workload_generator(self, volume_id):
@@ -168,10 +175,10 @@ class CinderWorkloadGenerator:
         '''
 
         if size is None:
-            size = self.volume_size
+            size = np.random.choice(self.volume_size[0], 1, self.volume_size[1])
 
-        read_iops = np.random.choice(self.request_read_iops, 1, p=[0.5, 0.3, 0.2])
-        write_iops = np.random.choice(self.request_write_iops, 1, p=[0.5, 0.3, 0.2])
+        read_iops = np.random.choice(self.request_read_iops[0], 1, p=self.request_read_iops[1])
+        write_iops = np.random.choice(self.request_write_iops[0], 1, p=self.request_write_iops[1])
 
         id = communication.insert_volume_request(
             experiment_id=CinderWorkloadGenerator.experiment["id"],
@@ -237,14 +244,15 @@ class CinderWorkloadGenerator:
 
             if len(new_device) > 0:
                 if len(new_device) > 1:
-                    raise Exception("two devices attached at the same time, cannot identiify which one should be mounted to which voilume")
+                    raise Exception(
+                        "two devices attached at the same time, cannot identiify which one should be mounted to which voilume")
                 device = new_device.pop()
                 break
 
-            # out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
-            #
-            # if device in out:
-            #     break
+                # out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
+                #
+                # if device in out:
+                #     break
 
         # out = tools.run_command2("reset", debug=True)
 
@@ -321,9 +329,10 @@ class CinderWorkloadGenerator:
         try:
             vol = cinder.volumes.get(volume_id)
         except Exception as err:
-            tools.log("ERROR [_detach_volume] attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(err))
+            tools.log(
+                "ERROR [_detach_volume] attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(
+                    err))
             return "volume-not-exists"
-
 
         if vol.status == "in-use":
 
@@ -341,7 +350,6 @@ class CinderWorkloadGenerator:
         attach_result = self.attach_volume(wg.current_vm_id, volume.id)
 
         if attach_result is not None:
-
             self.mount_volume(attach_result.device, volume)
 
         return volume.id
@@ -396,7 +404,6 @@ class CinderWorkloadGenerator:
                     continue
 
                 if vol_reload.status == 'detaching' or vol_reload.status == 'deleting':
-
                     continue
 
                 if vol_reload.status == 'available':
@@ -424,7 +431,10 @@ class CinderWorkloadGenerator:
 
         while True:
 
-            if len(volumes) < self.max_number_volumes:
+            if len(volumes) < np.random.choice(
+                    self.max_number_volumes[0],
+                    1,
+                    p=self.max_number_volumes[1]):
 
                 volume_id = self.create_attach_volume()
 
@@ -443,12 +453,17 @@ class CinderWorkloadGenerator:
 
             for volume in volumes[:]:
 
-                if tools.get_time_difference(volume["create_time"]) > self.volume_life_seconds:
+                if tools.get_time_difference(volume["create_time"]) > \
+                        np.random.choice(
+                            self.volume_life_seconds[0],
+                            1,
+                            p=self.volume_life_seconds[1]):
                     volume["generator"].terminate()
                     self.detach_delete_volume(volume["id"])
                     volumes.remove(volume)
 
             time.sleep(0.5)
+
 
 if __name__ == "__main__":
 
@@ -457,13 +472,13 @@ if __name__ == "__main__":
     parser.add_argument('commands', type=str, nargs='+',
                         choices=['det-del', 'del-avail', 'start', 'storage', 'add'],
                         help=
-"""define what is the main function command:
-[add -> attach and mount a new volume]
-[storage -> generatore fio workload only on the current attached volumes. If no volume, exit]
-[start -> start the simulation by constantly adding and removing volumes and simulate storage workload using fio]
-[del-avail -> deletes all available volums]
-[det-del -> detach and delete all volumes attached to the current server. Id --volume is given only detach and delete the single volume.]
-"""
+                        """define what is the main function command:
+                        [add -> attach and mount a new volume]
+                        [storage -> generatore fio workload only on the current attached volumes. If no volume, exit]
+                        [start -> start the simulation by constantly adding and removing volumes and simulate storage workload using fio]
+                        [del-avail -> deletes all available volums]
+                        [det-del -> detach and delete all volumes attached to the current server. Id --volume is given only detach and delete the single volume.]
+                        """
                         )
 
     # parser.add_argument('--sum', dest='accumulate', action='store_const',
@@ -471,37 +486,41 @@ if __name__ == "__main__":
     #                     help='sum the integers (default: find the max)')
 
     parser.add_argument('--fio_test_name', default="workload_generator.fio", metavar='', type=str,
-                        required=False,
-                        help='Test name for fio')
+                        required=True, help='Test name for fio')
 
-    parser.add_argument('--delay_between_workload_generation', default=1, metavar='', type=float,
-                        required=False,
-                        help='wait before generation - seconds')
-
-    parser.add_argument('--max_number_volumes', default=3, metavar='', type=int, required=False,
-                        help='maximum number of volumes to be created')
-
-    parser.add_argument('--volume_life_seconds', default=360, type=int, metavar='', required=False,
-                        help='delete a volume after th specified second upon its creation.')
-
-    parser.add_argument('--volume', type=str, metavar='', required=False,
+    parser.add_argument('--volume', type=str, metavar='', required=True,
                         help='Specify volume id to do operation on. For example for det-del a single volume.')
 
-    parser.add_argument('--volume_size', default=2, type=int, metavar='', required=False,
-                        help='Specify volume id to do operation on. For example for det-del a single volume.')
+    parser.add_argument('--request_read_iops', metavar='', type=str, required=True,
+                        help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+
+    parser.add_argument('--request_write_iops', metavar='', type=str, required=True,
+                        help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+
+    parser.add_argument('--delay_between_workload_generation', metavar='', type=str, required=True,
+                        help='wait before generation - seconds. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+
+    parser.add_argument('--max_number_volumes', metavar='', type=str, required=True,
+                        help='maximum number of volumes to be created. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+
+    parser.add_argument('--volume_life_seconds', metavar='', type=str, required=True,
+                        help='delete a volume after th specified second upon its creation. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+
+    parser.add_argument('--volume_size', type=str, metavar='', required=True,
+                        help='Specify volume id to do operation on. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
     args = parser.parse_args()
 
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
-
-        request_read_iops=[500, 750, 1000],
-        request_write_iops=[300, 400, 500],
         fio_test_name=args.fio_test_name,
-        delay_between_workload_generation=args.delay_between_workload_generation,
-        max_number_volumes=args.max_number_volumes,
-        volume_life_seconds=args.volume_life_seconds,
-        volume_size=args.volume_size
+
+        request_read_iops=json.loads(args.request_read_iops),
+        request_write_iops=json.loads(args.request_write_iops),
+        delay_between_workload_generation=json.loads(args.delay_between_workload_generation),
+        max_number_volumes=json.loads(args.max_number_volumes),
+        volume_life_seconds=json.loads(args.volume_life_seconds),
+        volume_size=json.loads(args.volume_size)
     )
 
     if "det-del" in args.commands:
@@ -543,4 +562,4 @@ if __name__ == "__main__":
 
     else:
 
-        tools.log("Wrong command: %s. check --help" % sys.argv)
+        tools.log("Wrong command: %s. check --help")
