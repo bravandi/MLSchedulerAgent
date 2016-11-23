@@ -87,11 +87,11 @@ class StorageWorkloadGenerator:
             tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
                       (str(duration), str(iops_measured), generator_instance.volume_id, out, err))
 
-            time.sleep(np.random.choice(
+            time.sleep(int(np.random.choice(
                 generator_instance.delay_between_workload_generation[0],
                 1,
                 p=generator_instance.delay_between_workload_generation[1]
-            ))
+            )))
 
 
 class CinderWorkloadGenerator:
@@ -175,10 +175,10 @@ class CinderWorkloadGenerator:
         '''
 
         if size is None:
-            size = np.random.choice(self.volume_size[0], 1, self.volume_size[1])
+            size = int(np.random.choice(self.volume_size[0], 1, self.volume_size[1]))
 
-        read_iops = np.random.choice(self.request_read_iops[0], 1, p=self.request_read_iops[1])
-        write_iops = np.random.choice(self.request_write_iops[0], 1, p=self.request_write_iops[1])
+        read_iops = int(np.random.choice(self.request_read_iops[0], 1, p=self.request_read_iops[1]))
+        write_iops = int(np.random.choice(self.request_write_iops[0], 1, p=self.request_write_iops[1]))
 
         id = communication.insert_volume_request(
             experiment_id=CinderWorkloadGenerator.experiment["id"],
@@ -431,10 +431,7 @@ class CinderWorkloadGenerator:
 
         while True:
 
-            if len(volumes) < np.random.choice(
-                    self.max_number_volumes[0],
-                    1,
-                    p=self.max_number_volumes[1]):
+            if len(volumes) < int(np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
 
                 volume_id = self.create_attach_volume()
 
@@ -454,10 +451,10 @@ class CinderWorkloadGenerator:
             for volume in volumes[:]:
 
                 if tools.get_time_difference(volume["create_time"]) > \
-                        np.random.choice(
+                        int(np.random.choice(
                             self.volume_life_seconds[0],
                             1,
-                            p=self.volume_life_seconds[1]):
+                            p=self.volume_life_seconds[1])):
                     volume["generator"].terminate()
                     self.detach_delete_volume(volume["id"])
                     volumes.remove(volume)
@@ -481,32 +478,30 @@ if __name__ == "__main__":
                         """
                         )
 
-    # parser.add_argument('--sum', dest='accumulate', action='store_const',
-    #                     const=sum, default=max,
-    #                     help='sum the integers (default: find the max)')
+    temp_required = True
 
     parser.add_argument('--fio_test_name', default="workload_generator.fio", metavar='', type=str,
-                        required=True, help='Test name for fio')
+                        required=temp_required, help='Test name for fio')
 
-    parser.add_argument('--volume', type=str, metavar='', required=True,
+    parser.add_argument('--volume', type=str, metavar='', required=False,
                         help='Specify volume id to do operation on. For example for det-del a single volume.')
 
-    parser.add_argument('--request_read_iops', metavar='', type=str, required=True,
+    parser.add_argument('--request_read_iops', metavar='', type=str, required=temp_required,
                         help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--request_write_iops', metavar='', type=str, required=True,
+    parser.add_argument('--request_write_iops', metavar='', type=str, required=temp_required,
                         help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--delay_between_workload_generation', metavar='', type=str, required=True,
+    parser.add_argument('--delay_between_workload_generation', metavar='', type=str, required=temp_required,
                         help='wait before generation - seconds. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--max_number_volumes', metavar='', type=str, required=True,
+    parser.add_argument('--max_number_volumes', metavar='', type=str, required=temp_required,
                         help='maximum number of volumes to be created. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--volume_life_seconds', metavar='', type=str, required=True,
+    parser.add_argument('--volume_life_seconds', metavar='', type=str, required=temp_required,
                         help='delete a volume after th specified second upon its creation. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--volume_size', type=str, metavar='', required=True,
+    parser.add_argument('--volume_size', type=str, metavar='', required=temp_required,
                         help='Specify volume id to do operation on. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
     args = parser.parse_args()
