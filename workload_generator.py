@@ -478,7 +478,7 @@ if __name__ == "__main__":
                         """
                         )
 
-    temp_required = True
+    temp_required = False
 
     parser.add_argument('--fio_test_name', default="workload_generator.fio", metavar='', type=str,
                         required=temp_required, help='Test name for fio')
@@ -486,22 +486,23 @@ if __name__ == "__main__":
     parser.add_argument('--volume', type=str, metavar='', required=False,
                         help='Specify volume id to do operation on. For example for det-del a single volume.')
 
-    parser.add_argument('--request_read_iops', metavar='', type=str, required=temp_required,
+    parser.add_argument('--request_read_iops', default='[]', metavar='', type=str, required=temp_required,
                         help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--request_write_iops', metavar='', type=str, required=temp_required,
+    parser.add_argument('--request_write_iops', default='[]', metavar='', type=str, required=temp_required,
                         help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--delay_between_workload_generation', metavar='', type=str, required=temp_required,
+    parser.add_argument('--delay_between_workload_generation', default='[]', metavar='', type=str,
+                        required=temp_required,
                         help='wait before generation - seconds. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--max_number_volumes', metavar='', type=str, required=temp_required,
+    parser.add_argument('--max_number_volumes', default='[]', metavar='', type=str, required=temp_required,
                         help='maximum number of volumes to be created. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--volume_life_seconds', metavar='', type=str, required=temp_required,
+    parser.add_argument('--volume_life_seconds', default='[]', metavar='', type=str, required=temp_required,
                         help='delete a volume after th specified second upon its creation. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--volume_size', type=str, metavar='', required=temp_required,
+    parser.add_argument('--volume_size', default='[]', type=str, metavar='', required=temp_required,
                         help='Specify volume id to do operation on. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
     args = parser.parse_args()
