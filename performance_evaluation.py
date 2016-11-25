@@ -7,6 +7,7 @@ import os
 from multiprocessing import Process, Array
 import pdb
 
+
 # class FIOTest(threading.Thread):
 class FIOTest:
     """
@@ -28,7 +29,7 @@ class FIOTest:
         self.volume_path = volume_path
         self.cinder_volume_id = cinder_volume_id
 
-        tmp = type('', (object,),{'value': ''})()
+        tmp = type('', (object,), {'value': ''})()
 
         self.last_start_time = tmp
         self.last_end_time = tmp
@@ -55,7 +56,7 @@ class FIOTest:
             args=(self,
                   self.last_start_time,
                   self.last_end_time,
-                  self.last_terminate_time, ))
+                  self.last_terminate_time,))
 
         # tools.log("   Start test for volume: %s Time: %s" %
         #           (self.cinder_volume_id, self.last_start_time))
@@ -74,7 +75,6 @@ class FIOTest:
 
     def is_alive(self):
         if self.proc == None:
-
             return False
 
         return self.proc.is_alive()
@@ -84,8 +84,8 @@ class FIOTest:
 
         tools.log(
             "   {run_f_test} Time: %s \ncommand: %s" %
-            (str(test_instance.last_start_time.value), PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
-
+            (str(test_instance.last_start_time.value),
+             PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
 
         out, err = tools.run_command(
             ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
@@ -98,7 +98,7 @@ class FIOTest:
 
         communication.insert_volume_performance_meter(
             experiment_id=PerformanceEvaluation.experiment["id"],
-            sla_violation_id=1, #1 means no violation
+            sla_violation_id=1,  # 1 means no violation
             nova_id=tools.get_current_tenant_id(),
             cinder_volume_id=test_instance.cinder_volume_id,
             read_iops=iops_measured["read"],
@@ -123,14 +123,14 @@ class FIOTest:
 
 
 class PerformanceEvaluation:
-
     fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
     fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
     experiment = None
     f_test_instances = {}
 
-    def __init__(self, fio_test_name, current_vm_id, terminate_if_takes, restart_gap, restart_gap_after_terminate, show_fio_output):
+    def __init__(self, fio_test_name, current_vm_id, terminate_if_takes, restart_gap, restart_gap_after_terminate,
+                 show_fio_output):
 
         self.fio_test_name = fio_test_name
         self.current_vm_id = current_vm_id
@@ -156,7 +156,6 @@ class PerformanceEvaluation:
         test_path = volume_path + test_name
 
         if PerformanceEvaluation.f_test_instances.has_key(cinder_volume_id) == False:
-
             f_test = FIOTest(test_path=test_path,
                              volume_path=volume_path,
                              cinder_volume_id=cinder_volume_id,
@@ -198,7 +197,8 @@ class PerformanceEvaluation:
                 return
 
             # if terminated wait for xx seconds then start the process
-            if last_terminate_time is not None and tools.get_time_difference(last_terminate_time) < self.restart_gap_after_terminate:
+            if last_terminate_time is not None and tools.get_time_difference(
+                    last_terminate_time) < self.restart_gap_after_terminate:
                 return
 
             # if volume is attached but not mounted yet, or the volume is detached
@@ -208,9 +208,10 @@ class PerformanceEvaluation:
 
             # make sure the test file [*.fio] exists
             if True or os.path.isfile(test_path) == False:
-
+                # try:
                 with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
                     data = myfile.read().split('\n')
+                    myfile.close()
 
                     data[1] = "directory=" + volume_path
 
@@ -220,7 +221,11 @@ class PerformanceEvaluation:
                         volume_test_file.write("%s\n" % item)
 
                     volume_test_file.close()
-            # pdb.set_trace()
+                    # except Exception as err:
+                    #     pdb.set_trace()
+                    #     tools.log("ERROR [fio_test] were not able to copy .fio file" % (str(err)))
+                    #     return
+
             f_test.start()
 
     def run_fio_test(self):
@@ -228,7 +233,6 @@ class PerformanceEvaluation:
         while True:
 
             for volume in tools.get_all_attached_volumes(self.current_vm_id):
-
                 self.fio_test(cinder_volume_id=volume.id,
                               test_name=self.fio_test_name)
 

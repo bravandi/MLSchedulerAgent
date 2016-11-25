@@ -134,12 +134,44 @@ def log(message, debug=False):
     print ("\n" + message + "\n")
 
 
+def check_volume_status(volume_id, status):
+    cinder = get_cinder_client()
+
+    try:
+        vol_reload = cinder.volumes.get(volume_id)
+    except:
+        return False
+
+    if vol_reload.status == status:
+
+        return True
+
+    return False
+
+
 def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path="/media"):
+    """
+
+    :param virtual_machine_id:
+    :param from_nova: if false, it will read the os directory media
+    :param mount_base_path:
+    :return:
+    """
 
     if from_nova:
         # returns volume object the volume will be ().id
         nova = get_nova_client()
-        return nova.volumes.get_server_volumes(virtual_machine_id)
+        vols = nova.volumes.get_server_volumes(virtual_machine_id)
+        result = []
+
+        for vol in vols:
+
+            if check_volume_status(vol.volumeId, "error") is True:
+
+                continue
+            result.append(vol)
+
+        return result
 
     else:
         # returns a list of string containing the folders names

@@ -9,9 +9,18 @@ function c_killProc(){
 #	do
 #		print $KILLPID;
 #		echo $KILLPID
-#	done
+#	donea
 
 	sudo ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
+}
+
+function c_catErr(){
+	sudo find /home/ubuntu -type f -name '*.err' -exec cat {} +
+}
+
+function c_delErrOutFiles(){
+	 sudo rm /home/ubuntu/*.err
+	 sudo rm /home/ubuntu/*.out
 }
 
 function c_killPerformanceEvaluation(){

@@ -9,7 +9,6 @@ from datetime import datetime
 import pdb
 import numpy as np
 
-
 class StorageWorkloadGenerator:
     """
 
@@ -93,7 +92,6 @@ class StorageWorkloadGenerator:
                 p=generator_instance.delay_between_workload_generation[1]
             )))
 
-
 class CinderWorkloadGenerator:
     fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
     fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
@@ -111,6 +109,7 @@ class CinderWorkloadGenerator:
                  volume_size,
                  request_read_iops,
                  request_write_iops,
+                 wait_after_volume_rejected,
                  workload_id=0):
         """
 
@@ -121,6 +120,7 @@ class CinderWorkloadGenerator:
         :return:
         """
 
+        self.wait_after_volume_rejected = wait_after_volume_rejected
         self.request_read_iops = request_read_iops
         self.request_write_iops = request_write_iops
         self.current_vm_id = current_vm_id
@@ -351,6 +351,8 @@ class CinderWorkloadGenerator:
 
         if attach_result is not None:
             self.mount_volume(attach_result.device, volume)
+        else:
+            return None
 
         return volume.id
 
@@ -436,6 +438,14 @@ class CinderWorkloadGenerator:
                 volume_id = self.create_attach_volume()
 
                 if volume_id is None:
+                    # if failed to create a volume wait for 30 sec then retry
+                    time.sleep(
+                        int(np.random.choice(
+                            self.wait_after_volume_rejected[0],
+                            1,
+                            p=self.wait_after_volume_rejected[1]))
+                    )
+
                     continue
 
                 workload_generator = wg.run_storage_workload_generator(volume_id)
@@ -505,12 +515,16 @@ if __name__ == "__main__":
     parser.add_argument('--volume_size', default='[]', type=str, metavar='', required=temp_required,
                         help='Specify volume id to do operation on. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
+    parser.add_argument('--wait_after_volume_rejected', default='[[30], [1.0]]', type=str, metavar='', required=temp_required,
+                        help='valume rejcected wait before request for new volume. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+
     args = parser.parse_args()
 
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name=args.fio_test_name,
 
+        wait_after_volume_rejected=json.loads(args.wait_after_volume_rejected),
         request_read_iops=json.loads(args.request_read_iops),
         request_write_iops=json.loads(args.request_write_iops),
         delay_between_workload_generation=json.loads(args.delay_between_workload_generation),
