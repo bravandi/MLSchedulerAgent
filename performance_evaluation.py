@@ -248,13 +248,6 @@ class PerformanceEvaluation:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Volumes QoS performance evaluator.')
 
-    # parser.add_argument('integers', metavar='N', type=int, nargs='+',
-    #                     help='an integer for the accumulator')
-
-    # parser.add_argument('--sum', dest='accumulate', action='store_const',
-    #                     const=sum, default=max,
-    #                     help='sum the integers (default: find the max)')
-
     parser.add_argument('--fio_test_name', default="resource_evaluation.fio", metavar='', type=str,
                         required=False,
                         help='Test name for fio')
@@ -268,7 +261,7 @@ if __name__ == "__main__":
     parser.add_argument('--restart_gap_after_terminate', metavar='', type=int, required=False, default=50,
                         help='If terminated because of the TERMINATE_IF_TAKES, then restart after specified seconds')
 
-    parser.add_argument('--show_fio_output', type=bool, metavar='', required=False, default=False,
+    parser.add_argument('--show_fio_output', type=str, metavar='', required=False, default='False',
                         help='show fio test output')
 
     args = parser.parse_args()
@@ -280,7 +273,7 @@ if __name__ == "__main__":
         terminate_if_takes=args.terminate_if_takes,
         restart_gap=args.restart_gap,
         restart_gap_after_terminate=args.restart_gap_after_terminate,
-        show_fio_output=args.show_fio_output
+        show_fio_output=tools.str2bool(args.show_fio_output)
     )
 
     p.run_fio_test()

@@ -191,6 +191,11 @@ def get_time_difference(start_time, end_time=None):
     difference = (end_time - start_time)
     return difference.total_seconds()
 
+
+def str2bool(v):
+  return v.lower() in ("yes", "true", "t", "1")
+
+
 def get_session():
     auth = v3.Password(auth_url="http://controller:35357/v3",
                        username='admin',
