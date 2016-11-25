@@ -296,7 +296,9 @@ class CinderWorkloadGenerator:
         else:
             tools.log("ERROR [detach_volume] the volume is not unmounted. Device: %s Volume_id: %s" %
                       (str(device), cinder_volume_id))
-            # raise Exception("ERROR [detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
+            raise Exception("ERROR [detach_volume] the volume is not unmounted. Device: %s Volume_id: %s" %
+                            (str(device), cinder_volume_id))
+
             return False
 
         return True
