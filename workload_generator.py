@@ -8,7 +8,7 @@ import communication
 from datetime import datetime
 import pdb
 import numpy as np
-
+import random
 
 class StorageWorkloadGenerator:
     """
@@ -452,6 +452,9 @@ class CinderWorkloadGenerator:
         self.detach_delete_all_volumes()
 
         volumes = []
+
+        # try to reduce the chance of having concurrent attachment
+        time.sleep(round(random.uniform(0.5, 4.1), 2))
 
         while True:
 
