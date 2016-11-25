@@ -294,10 +294,12 @@ class CinderWorkloadGenerator:
                 pass
 
         else:
-            tools.log("ERROR [detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
-            raise Exception("ERROR [detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
+            tools.log("ERROR [detach_volume] the volume is not unmounted. Device: %s Volume_id: %s" %
+                      (str(device), cinder_volume_id))
+            # raise Exception("ERROR [detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
+            return False
 
-        return device
+        return True
 
     def delete_volume(self, cinder_volume_id, is_deleted=1, mount_path="/media/"):
 
@@ -352,8 +354,10 @@ class CinderWorkloadGenerator:
             nova.volumes.delete_server_volume(nova_id, volume_id)
 
         else:
+            tools.log("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
+                      (vol.status, volume_id))
 
-            raise Exception("volume status is no 'in-use' it is %s volume_id: %s" %
+            raise Exception("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
                             (vol.status, volume_id))
 
     def create_attach_volume(self):
