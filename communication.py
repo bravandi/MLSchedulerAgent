@@ -144,12 +144,16 @@ def insert_volume_performance_meter(
 
 
 def delete_volume(
+        is_deleted=1,
         id=0,
         cinder_id=None,
         delete_clock=0,
         delete_time=None):
     """
     Delete either by record id or by the cinder volume id.
+    :param is_deleted:
+        1--> normal delete
+        2--> deleted because could not be able to mount the volume. because openstack sends wrong device name to mount volume and two devices were available at the same time. so it does not know to which mount the volume.
     :param id:
     :param cinder_id:
     :param delete_clock:
@@ -165,6 +169,7 @@ def delete_volume(
     data = {
         "id": id,
         "cinder_id": cinder_id,
+        "is_deleted": is_deleted,
         "delete_clock": delete_clock,
         "delete_time": delete_time
     }

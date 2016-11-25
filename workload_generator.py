@@ -9,6 +9,7 @@ from datetime import datetime
 import pdb
 import numpy as np
 
+
 class StorageWorkloadGenerator:
     """
 
@@ -91,6 +92,7 @@ class StorageWorkloadGenerator:
                 1,
                 p=generator_instance.delay_between_workload_generation[1]
             )))
+
 
 class CinderWorkloadGenerator:
     fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
@@ -213,7 +215,9 @@ class CinderWorkloadGenerator:
 
         # wait until the volume is ready
         if tools.cinder_wait_for_volume_status(volume_id, status="available") is False:
-            self._delete_volume(volume_id)
+
+            self._delete_volume(volume_id=volume_id)
+
             tools.log("VOLUME DELETED because status is 'error' id: %s" % volume_id)
             return None
 
@@ -225,7 +229,7 @@ class CinderWorkloadGenerator:
 
         return result
 
-    def mount_volume(self, device, volume, base_path="/media/"):
+    def mount_volume(self, device_from_openstack_not_used, volume, base_path="/media/"):
         '''
 
         :param device: not used because openstack returns wrong device sometimes. So, nby comparing fdisk -l it finds the latest attached device
@@ -233,7 +237,7 @@ class CinderWorkloadGenerator:
         :return:
         '''
 
-        print ("mount_volume device: %s volume.id: %", device, volume.id)
+        # todo I know there is a case that two volumes get attached at same time, therefore two devices gets ready and it only picks one of them this can cause testing/writing to a wrong volume since device maps the underlying attachment process. Therore must detach and remove the volume.
 
         already_attached_devices = tools.get_attached_devices()
 
@@ -244,17 +248,17 @@ class CinderWorkloadGenerator:
 
             if len(new_device) > 0:
                 if len(new_device) > 1:
-                    raise Exception(
-                        "two devices attached at the same time, cannot identiify which one should be mounted to which voilume")
+                    tools.log(
+                        "ERROR [mount_volume] two devices attached at the same time, can not identify which one should be mounted to which volume.")
+                    # raise Exception(
+                    #     "ERROR [mount_volume] two devices attached at the same time, can not identify which one should be mounted to which volume.")
+
+                    return False
+
                 device = new_device.pop()
                 break
 
-                # out, err = tools.run_command(["sudo", "fdisk", "-l"], debug=False)
-                #
-                # if device in out:
-                #     break
-
-        # out = tools.run_command2("reset", debug=True)
+        print ("try to mount_volume device: %s volume.id: %", device, volume.id)
 
         out, err = tools.run_command(["sudo", 'mkfs', '-t', "ext3", device], debug=True)
 
@@ -264,12 +268,16 @@ class CinderWorkloadGenerator:
 
         out, err = tools.run_command(["sudo", 'mount', device, mount_to_path], debug=True)
 
+        return True
         # todo instead of 3 seconds
 
-    def detach_delete_volume(self, cinder_volume_id):
+    def detach_delete_volume(self, cinder_volume_id, is_deleted=1):
 
         self.detach_volume(cinder_volume_id)
-        self.delete_volume(cinder_volume_id)
+        self.delete_volume(
+            cinder_volume_id=cinder_volume_id,
+            is_deleted=is_deleted
+        )
 
     def detach_volume(self, cinder_volume_id):
 
@@ -286,12 +294,12 @@ class CinderWorkloadGenerator:
                 pass
 
         else:
-
-            raise Exception("[detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
+            tools.log("ERROR [detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
+            raise Exception("ERROR [detach_volume] the volume is not unmounted. volume_id: %s" % (cinder_volume_id))
 
         return device
 
-    def delete_volume(self, cinder_volume_id, mount_path="/media/"):
+    def delete_volume(self, cinder_volume_id, is_deleted=1, mount_path="/media/"):
 
         cinder = tools.get_cinder_client()
 
@@ -305,17 +313,22 @@ class CinderWorkloadGenerator:
         if vol_reload.status == 'available':
             cinder.volumes.delete(cinder_volume_id)
 
-            communication.delete_volume(cinder_id=cinder_volume_id)
+            communication.delete_volume(
+                cinder_id=cinder_volume_id,
+                is_deleted=is_deleted
+            )
 
             # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
             tools.run_command(["sudo", "rm", "-d", "-r", mount_path + cinder_volume_id])
 
-    def _delete_volume(self, cinder_volume_id):
+    def _delete_volume(self, volume_id, is_deleted=1):
         cinder = tools.get_cinder_client()
 
-        cinder.volumes.delete(cinder_volume_id)
+        cinder.volumes.delete(volume_id)
 
-        communication.delete_volume(cinder_id=cinder_volume_id)
+        communication.delete_volume(
+            cinder_id=volume_id,
+            is_deleted=is_deleted)
 
     def _detach_volume(self, nova_id, volume):
         cinder = tools.get_cinder_client()
@@ -350,7 +363,16 @@ class CinderWorkloadGenerator:
         attach_result = self.attach_volume(wg.current_vm_id, volume.id)
 
         if attach_result is not None:
-            self.mount_volume(attach_result.device, volume)
+            if self.mount_volume(
+                    device_from_openstack_not_used=attach_result.device,
+                    volume=volume) is False:
+                # remove the volume
+                self.detach_delete_volume(
+                    cinder_volume_id=volume.id,
+                    is_deleted=2
+                )
+
+                return None
         else:
             return None
 
@@ -465,8 +487,11 @@ class CinderWorkloadGenerator:
                             self.volume_life_seconds[0],
                             1,
                             p=self.volume_life_seconds[1])):
+
                     volume["generator"].terminate()
+
                     self.detach_delete_volume(volume["id"])
+
                     volumes.remove(volume)
 
             time.sleep(0.5)
@@ -515,7 +540,8 @@ if __name__ == "__main__":
     parser.add_argument('--volume_size', default='[]', type=str, metavar='', required=temp_required,
                         help='Specify volume id to do operation on. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--wait_after_volume_rejected', default='[[30], [1.0]]', type=str, metavar='', required=temp_required,
+    parser.add_argument('--wait_after_volume_rejected', default='[[30], [1.0]]', type=str, metavar='',
+                        required=temp_required,
                         help='valume rejcected wait before request for new volume. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
     args = parser.parse_args()
