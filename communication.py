@@ -143,6 +143,34 @@ def insert_volume_performance_meter(
     return _parse_response(requests.post(__server_url + "insert_volume_performance_meter", data=data))
 
 
+def insert_log(
+        experiment_id=0,
+        app=None,
+        type=None,
+        code=None,
+        file_name=None,
+        function_name=None,
+        message=None,
+        exception_message=None,
+        create_time=None):
+    if create_time is None:
+        create_time = datetime.now()
+
+    data = {
+        "experiment_id": experiment_id,
+        "app": app,
+        "type": type,
+        "code": code,
+        "file_name": file_name,
+        "function_name": function_name,
+        "message": message,
+        "exception_message": exception_message,
+        "create_time": create_time
+    }
+
+    return _parse_response(requests.post(__server_url + "insert_log", data=data))
+
+
 def delete_volume(
         is_deleted=1,
         id=0,

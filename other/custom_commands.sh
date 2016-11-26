@@ -88,6 +88,10 @@ function c_cdr_SL(){
 	cinder service-list
 }
 
+function c_attachedVolumes(){
+	sudo fdisk -l | grep vd
+}
+
 function c_debugClient(){
 
     # this is not working it can not find pudb.run maybe because its not registered with venv ?

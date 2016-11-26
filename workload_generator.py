@@ -57,15 +57,20 @@ class StorageWorkloadGenerator:
             # command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % generator_instance.volume_id
             tools.log(
                 "   {run_f_test} Time: %s \ncommand: %s" %
-                (str(start_time), command))
+                (str(start_time), command), insert_db=False)
 
             out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
                                          debug=False)
 
             if err != "":
                 tools.log(
-                    "   {ERROR} Time: %s\nVOLUME: %s\nERROR: %s" %
-                    (str(start_time), generator_instance.volume_id, err))
+                    type="ERROR",
+                    code="work_gen_run_fio",
+                    file_name="workload_generator.py",
+                    function_name="run_workload_generator",
+                    message="Time: %s\nVOLUME: %s" %
+                            (str(start_time), generator_instance.volume_id),
+                    exception=err)
 
                 break
 
@@ -86,7 +91,8 @@ class StorageWorkloadGenerator:
                 out = "SHOW_OUTPUT = False"
 
             tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                      (str(duration), str(iops_measured), generator_instance.volume_id, out, err))
+                      (str(duration), str(iops_measured), generator_instance.volume_id, out, err),
+                      insert_db=False)
 
             time.sleep(int(np.random.choice(
                 generator_instance.delay_between_workload_generation[0],
@@ -144,28 +150,41 @@ class CinderWorkloadGenerator:
         volume_path = "%s%s/" % (CinderWorkloadGenerator.mount_base_path, volume_id)
         test_path = volume_path + self.fio_test_name
 
+        # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
+
+        try:
+            if True or os.path.isfile(test_path) == False:
+
+                with open(CinderWorkloadGenerator.fio_tests_conf_path + self.fio_test_name, 'r') as myfile:
+                    data = myfile.read().split('\n')
+
+                    data[1] = "directory=" + volume_path
+
+                    volume_test_file = open(test_path, 'w')
+
+                    for item in data:
+                        volume_test_file.write("%s\n" % item)
+
+                    volume_test_file.close()
+        except Exception as err:
+            # todo !important make sure the consistency of cached volume ides
+
+            tools.log(
+                type="ERROR",
+                code="work_gen_concurrent_bug",
+                file_name="workload_generator.py",
+                function_name="run_storage_workload_generator",
+                message="could not create the fio test file for workload generator",
+                exception=err)
+
+            return None
+
         generator = StorageWorkloadGenerator(
             volume_id=volume_id,
             workload_type="",
             delay_between_workload_generation=self.delay_between_workload_generation,
             show_output=False,
             test_path=test_path)
-
-        # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
-
-        if True or os.path.isfile(test_path) == False:
-
-            with open(CinderWorkloadGenerator.fio_tests_conf_path + self.fio_test_name, 'r') as myfile:
-                data = myfile.read().split('\n')
-
-                data[1] = "directory=" + volume_path
-
-                volume_test_file = open(test_path, 'w')
-
-                for item in data:
-                    volume_test_file.write("%s\n" % item)
-
-                volume_test_file.close()
 
         generator.start()
 
@@ -218,10 +237,16 @@ class CinderWorkloadGenerator:
         if tools.cinder_wait_for_volume_status(volume_id, status="available") is False:
             self._delete_volume(volume_id=volume_id)
 
-            tools.log("VOLUME DELETED because status is 'error' id: %s" % volume_id)
+            tools.log(
+                type="WARNING",
+                code="work_gen_concurrent_bug",
+                file_name="workload_generator.py",
+                function_name="attach_volume",
+                message="VOLUME DELETED because status is 'error' id: %s" % volume_id)
+
             return None
 
-        print ("attach_volume instance_id=%s volume_id=%s", instance_id, volume_id)
+        print("attach_volume instance_id=%s volume_id=%s", instance_id, volume_id)
 
         nova = tools.get_nova_client()
 
@@ -249,16 +274,19 @@ class CinderWorkloadGenerator:
             if len(new_device) > 0:
                 if len(new_device) > 1:
                     tools.log(
-                        "ERROR [mount_volume] two devices attached at the same time, can not identify which one should be mounted to which volume.")
-                    # raise Exception(
-                    #     "ERROR [mount_volume] two devices attached at the same time, can not identify which one should be mounted to which volume.")
+                        type="WARNING",
+                        code="work_gen_concurrent_bug",
+                        file_name="workload_generator.py",
+                        function_name="mount_volume",
+                        message="already_attached_devices: %s \nnew_devic: %s \ntwo devices attached at the same time, can not identify which one should be mounted to which volume." % (
+                        already_attached_devices, new_device))
 
                     return False
 
                 device = new_device.pop()
                 break
 
-        print ("try to mount_volume device: %s volume.id: %", device, volume.id)
+        print("try to mount_volume device: %s volume.id: %", device, volume.id)
 
         out, err = tools.run_command(["sudo", 'mkfs', '-t', "ext3", device], debug=True)
 
@@ -294,10 +322,17 @@ class CinderWorkloadGenerator:
                 pass
 
         else:
-            tools.log("ERROR [detach_volume] the volume is not unmounted. Device: %s Volume_id: %s" %
-                      (str(device), cinder_volume_id))
-            raise Exception("ERROR [detach_volume] the volume is not unmounted. Device: %s Volume_id: %s" %
-                            (str(device), cinder_volume_id))
+            tools.log(
+                type="ERROR",
+                code="work_gen_concurrent_bug",
+                file_name="workload_generator.py",
+                function_name="detach_volume",
+                message="the volume is not unmounted. Device: %s Volume_id: %s" %
+                        (str(device), cinder_volume_id)
+            )
+
+            # raise Exception("ERROR [detach_volume] the volume is not unmounted. Device: %s Volume_id: %s" %
+            #                 (str(device), cinder_volume_id))
 
             return False
 
@@ -347,8 +382,13 @@ class CinderWorkloadGenerator:
             vol = cinder.volumes.get(volume_id)
         except Exception as err:
             tools.log(
-                "ERROR [_detach_volume] attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(
-                    err))
+                type="WARNING",
+                code="work_gen",
+                file_name="workload_generator.py",
+                function_name="_detach_volume",
+                message="attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists",
+                exception=err)
+
             return "volume-not-exists"
 
         if vol.status == "in-use":
@@ -357,8 +397,12 @@ class CinderWorkloadGenerator:
 
         else:
             tools.log(
-                "ERROR [_detach_volume] attempted to detach, but volume status is not 'in-use' it is %s. volume_id: %s"
-                % (vol.status, volume_id))
+                type="ERROR",
+                code="work_gen",
+                file_name="workload_generator.py",
+                function_name="_detach_volume",
+                message="attempted to detach, but volume status is not 'in-use' it is %s. volume_id: %s"
+                        % (vol.status, volume_id))
 
             # raise Exception("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
             #                 (vol.status, volume_id))
@@ -373,6 +417,16 @@ class CinderWorkloadGenerator:
             if self.mount_volume(
                     device_from_openstack_not_used=attach_result.device,
                     volume=volume) is False:
+                lg = tools.log(
+                    type="WARNING",
+                    code="work_gen_mount_failed",
+                    file_name="workload_generator.py",
+                    function_name="create_attach_volume",
+                    message="cinder_reported_device:%s volume_id: %s" % (attach_result.device, volume.id)
+                )
+
+                raise Exception(lg)
+
                 # remove the volume
                 self.detach_delete_volume(
                     cinder_volume_id=volume.id,
@@ -428,9 +482,15 @@ class CinderWorkloadGenerator:
                 try:
                     vol_reload = cinder.volumes.get(volume.id)
                 except Exception as err:
+
                     tools.log(
-                        "ERROR [detach_delete_all_volumes] attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists. MSG: %s" % str(
-                            err))
+                        type="ERROR",
+                        code="work_gen",
+                        file_name="workload_generator.py",
+                        function_name="detach_delete_all_volumes",
+                        message="attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists.",
+                        exception=err)
+
                     volumes.remove(volume)
                     continue
 
@@ -571,19 +631,19 @@ if __name__ == "__main__":
     if "det-del" in args.commands:
 
         if args.volume:
-            tools.log("det-del volume: %s" % args.volume)
+            tools.log("det-del volume: %s" % args.volume, insert_db=False)
             wg.detach_delete_volume(args.volume)
 
         else:
-            tools.log("det-del all volumes")
+            tools.log("det-del all volumes", insert_db=False)
             wg.detach_delete_all_volumes()
 
     elif "del-avail" in args.commands:
-        tools.log("delete all available volumes")
+        tools.log("delete all available volumes", insert_db=False)
         wg.remove_all_available_volumes()
 
     elif "add" in args.commands:
-        tools.log("add,attach and mount a new volume")
+        tools.log("add,attach and mount a new volume", insert_db=False)
         volume = wg.create_volume()
         attach_result = wg.attach_volume(wg.current_vm_id, volume.id)
 
@@ -597,14 +657,3 @@ if __name__ == "__main__":
 
     elif "start" in args.commands:
         wg.start_simulation()
-        # print communication.insert_volume_request(
-        #     workload_id=1,
-        #     capacity=1,
-        #     type=0,
-        #     read_iops=500,
-        #     write_iops=500
-        # )
-
-    else:
-
-        tools.log("Wrong command: %s. check --help")

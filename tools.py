@@ -1,18 +1,18 @@
-#babak
+# babak
 import subprocess
 import time
-# import spur
+from datetime import datetime
 import pdb
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from datetime import datetime
 from cinderclient import client as c_client
 from novaclient import client as n_client
-
+import communication
 import os.path
 
-class Configs:
 
+class Configs:
     def __init__(
             self,
             workload_gen_delay_between_workload_generation,
@@ -21,12 +21,12 @@ class Configs:
             performance_eval_generation_fio_test_name,
             performance_eval_restart_gap,
             performance_eval_restart_gap_after_terminate
-            ):
-
+    ):
         pass
 
 
 _current_tenant_id = None
+
 
 def get_current_tenant_id():
     """
@@ -39,16 +39,16 @@ def get_current_tenant_id():
 
     path = os.path.expanduser("~/tenantid")
     if os.path.isfile(path) == False:
-
         return None
 
     with open(path) as data_file:
         return data_file.read(36)
 
+
 _current_tenant_id = get_current_tenant_id()
 
-
 _current_tenant_description = None
+
 
 def get_current_tenant_description():
     """
@@ -61,13 +61,14 @@ def get_current_tenant_description():
 
     path = os.path.expanduser("~/tenant_description")
     if os.path.isfile(path) == False:
-
         return None
 
     with open(path) as data_file:
         return data_file.read(36)
 
+
 _current_tenant_description = get_current_tenant_description()
+
 
 # import json
 # class Backend():
@@ -111,7 +112,6 @@ _current_tenant_description = get_current_tenant_description()
 
 
 def get_iops_measures_from_fio_output(out):
-
     iops_measured = {
         "read": -2,
         "write": -2
@@ -129,11 +129,6 @@ def get_iops_measures_from_fio_output(out):
     return iops_measured
 
 
-def log(message, debug=False):
-
-    print ("\n" + message + "\n")
-
-
 def check_volume_status(volume_id, status):
     cinder = get_cinder_client()
 
@@ -143,7 +138,6 @@ def check_volume_status(volume_id, status):
         return False
 
     if vol_reload.status == status:
-
         return True
 
     return False
@@ -167,7 +161,6 @@ def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path
         for vol in vols:
 
             if check_volume_status(vol.volumeId, "error") is True:
-
                 continue
             result.append(vol)
 
@@ -193,7 +186,7 @@ def get_time_difference(start_time, end_time=None):
 
 
 def str2bool(v):
-  return v.lower() in ("yes", "true", "t", "1")
+    return v.lower() in ("yes", "true", "t", "1")
 
 
 def get_session():
@@ -207,12 +200,12 @@ def get_session():
                        project_domain_name='default'
                        )
 
-
     sess = session.Session(auth=auth, verify='/path/to/ca.cert')
 
     return sess
 
-def cinder_wait_for_volume_status(volume_id, status, timeout = 0):
+
+def cinder_wait_for_volume_status(volume_id, status, timeout=0):
     '''
 
     :param volume_id:
@@ -231,11 +224,9 @@ def cinder_wait_for_volume_status(volume_id, status, timeout = 0):
         vol_reload = cinder.volumes.get(volume_id)
 
         if vol_reload.status == "error":
-
             return False
 
         if vol_reload.status == status:
-
             return True
 
         time.sleep(0.4)
@@ -243,12 +234,10 @@ def cinder_wait_for_volume_status(volume_id, status, timeout = 0):
 
 # todo design a proper error management when calling openstack services using client API ies
 def get_cinder_client():
-
     return c_client.Client(2, session=get_session())
 
 
 def get_nova_client():
-
     return n_client.Client(2, session=get_session())
 
 
@@ -278,6 +267,7 @@ def create_sequential_folder(path, folder_name):
     create_path = '/media/' + folder_name + str(max_folder_count + 1)
     out, err = run_command(["sudo", 'mkdir', create_path])
 
+
 def run_command(parameters, debug=False):
     # shell = spur.SshShell(
     #     hostname="10.18.75.153",
@@ -300,7 +290,7 @@ def run_command(parameters, debug=False):
     out, err = p.communicate()
 
     if debug:
-        print ("\nrun_command:\n" + str(parameters) + "\nOUT -->" + out + "\nERROR --> " + err)
+        print("\nrun_command:\n" + str(parameters) + "\nOUT -->" + out + "\nERROR --> " + err)
 
     return out, err
 
@@ -311,7 +301,7 @@ def run_command2(command, debug=False):
     assert task.wait() == 0
 
     if debug:
-        print ("\nrun_command:\n" + command + "\nOUT -->" + out)
+        print("\nrun_command:\n" + command + "\nOUT -->" + out)
 
     return out
 
@@ -343,20 +333,19 @@ def convert_string_datetime(input):
         return datetime.strptime(input.split('.')[0], "%Y-%m-%d %H:%M:%S")
 
 
-def umount_device(device, debug= False):
+def umount_device(device, debug=False):
     out, err = run_command(["sudo", "umount", "-f", "-l", device], debug=False)
 
     if debug:
-        print ("\nrun_command:\n" + "umount " + device + "\nOUT -->" + out)
+        print("\nrun_command:\n" + "umount " + device + "\nOUT -->" + out)
 
     if err == "":
-
         return False
 
     return True
 
 
-def grep(input, match = "", openstack = False):
+def grep(input, match="", openstack=False):
     """ grep equivalent for debugging in pdb """
 
     output = []
@@ -377,7 +366,7 @@ def grep(input, match = "", openstack = False):
             # if match == '':
             #     output.append(line)
 
-            if any(x in line for x in match):# match in line:
+            if any(x in line for x in match):  # match in line:
                 output.append(line)
 
     if type(input) is dict:
@@ -389,7 +378,7 @@ def grep(input, match = "", openstack = False):
             elif any(x in line for x in match):
                 output.append(line)
 
-    if(openstack):
+    if (openstack):
 
         output_properties = {}
 
@@ -397,8 +386,7 @@ def grep(input, match = "", openstack = False):
 
             line_parts = line.split('|')
 
-            if(len(line_parts) > 2):
-
+            if (len(line_parts) > 2):
                 output_properties[line_parts[1].strip()] = line_parts[2].strip()
 
         return output_properties
@@ -436,7 +424,53 @@ def get_attached_devices(match="vd", debug=False):
 
     return result
 
-if __name__ == "__main__":
 
-    print(get_attached_devices())
+def log(message,
+        type='',
+        app='agent',
+        code='',
+        file_name='',
+        function_name='',
+        exception='',
+        insert_db=True):
+    experiment_id = 0  # the database will insert the latest experiment id
+
+    exception_2 = ''
+    if exception != '':
+        exception_2 = "\n   ERR: " + str(exception)
+
+    msg = "\n{%s} %s-%s [%s - %s] %s. [%s] %s\n" \
+          % (app, type, code, function_name, file_name, message, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+             str(exception_2))
+
+    print(msg)
+
+    if insert_db is False:
+        return msg
+
+    communication.insert_log(
+        experiment_id=experiment_id,
+        app=app,
+        type=type,
+        code=code,
+        file_name=file_name,
+        function_name=function_name,
+        message=message,
+        exception_message=exception
+    )
+
+    return msg
+
+
+if __name__ == "__main__":
+    log(
+        'message',
+        type='type',
+        app='agent',
+        code='code',
+        file_name='file_name',
+        function_name='function_name',
+        exception='exception',
+        insert_db=True
+    )
     pass

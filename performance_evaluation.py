@@ -68,8 +68,13 @@ class FIOTest:
         self.last_end_time = Array('c', " " * 26)
         self.last_terminate_time = Array('c', str(datetime.now()))
 
-        tools.log("   {TERMINATE} After %s seconds VOLUME: %s Time: %s" %
-                  (str(after_seconds), self.cinder_volume_id, self.last_terminate_time.value))
+        tools.log(
+            type="INFO",
+            code="perfeval",
+            file_name="performance_evaluation.py",
+            function_name="terminate",
+            message="TERMINATE After %s seconds VOLUME: %s Time: %s" %
+                    (str(after_seconds), self.cinder_volume_id, self.last_terminate_time.value))
 
         self.proc.terminate()
 
@@ -85,7 +90,7 @@ class FIOTest:
         tools.log(
             "   {run_f_test} Time: %s \ncommand: %s" %
             (str(test_instance.last_start_time.value),
-             PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path))
+             PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path), insert_db=False)
 
         out, err = tools.run_command(
             ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
@@ -116,9 +121,8 @@ class FIOTest:
             out = "SHOW_OUTPUT = False"
 
         tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                  (str(duration), str(iops_measured), test_instance.cinder_volume_id, out, err))
-        tools.log("    IOPS %s: duration: %s" %
-                  (iops_measured, str(duration)))
+                  (str(duration), str(iops_measured), test_instance.cinder_volume_id, out, err), insert_db=False)
+        tools.log("    IOPS %s: duration: %s" % (iops_measured, str(duration)), insert_db=False)
         # return IOPS, difference.total_seconds(), out
 
 
@@ -206,27 +210,35 @@ class PerformanceEvaluation:
                 PerformanceEvaluation.f_test_instances.pop(cinder_volume_id)
                 return
 
+            try:
             # make sure the test file [*.fio] exists
-            if True or os.path.isfile(test_path) == False:
-                # try:
-                with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
-                    data = myfile.read().split('\n')
-                    myfile.close()
+                if True or os.path.isfile(test_path) == False:
 
-                    data[1] = "directory=" + volume_path
+                    with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
+                        data = myfile.read().split('\n')
+                        myfile.close()
 
-                    volume_test_file = open(test_path, 'w')
+                        data[1] = "directory=" + volume_path
 
-                    for item in data:
-                        volume_test_file.write("%s\n" % item)
+                        volume_test_file = open(test_path, 'w')
 
-                    volume_test_file.close()
-                    # except Exception as err:
-                    #     pdb.set_trace()
-                    #     tools.log("ERROR [fio_test] were not able to copy .fio file" % (str(err)))
-                    #     return
+                        for item in data:
+                            volume_test_file.write("%s\n" % item)
 
-            f_test.start()
+                        volume_test_file.close()
+
+                f_test.start()
+
+            except Exception as err:
+                # todo !important make sure the consistency of cached volume ides
+                tools.log(
+                    type="ERROR",
+                    code="perfeval_concurrent_bug",
+                    file_name="workload_generator.py",
+                    function_name="run_storage_workload_generator",
+                    message="could not create the fio test file for workload generator",
+                    exception=err)
+                return
 
     def run_fio_test(self):
 
