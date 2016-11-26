@@ -10,6 +10,7 @@ import pdb
 import numpy as np
 import random
 
+
 class StorageWorkloadGenerator:
     """
 
@@ -215,7 +216,6 @@ class CinderWorkloadGenerator:
 
         # wait until the volume is ready
         if tools.cinder_wait_for_volume_status(volume_id, status="available") is False:
-
             self._delete_volume(volume_id=volume_id)
 
             tools.log("VOLUME DELETED because status is 'error' id: %s" % volume_id)
@@ -356,11 +356,12 @@ class CinderWorkloadGenerator:
             nova.volumes.delete_server_volume(nova_id, volume_id)
 
         else:
-            tools.log("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
-                      (vol.status, volume_id))
+            tools.log(
+                "ERROR [_detach_volume] attempted to detach, but volume status is not 'in-use' it is %s. volume_id: %s"
+                % (vol.status, volume_id))
 
-            raise Exception("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
-                            (vol.status, volume_id))
+            # raise Exception("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
+            #                 (vol.status, volume_id))
 
     def create_attach_volume(self):
 
@@ -496,7 +497,6 @@ class CinderWorkloadGenerator:
                             self.volume_life_seconds[0],
                             1,
                             p=self.volume_life_seconds[1])):
-
                     volume["generator"].terminate()
 
                     self.detach_delete_volume(volume["id"])
