@@ -9,96 +9,7 @@ from datetime import datetime
 import pdb
 import numpy as np
 import random
-
-
-class StorageWorkloadGenerator:
-    """
-
-    """
-
-    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_workload_generation=1.0):
-        """
-
-        :param workload_type:
-        :param delay_between_workload_generation:
-        :return:
-        """
-
-        # threading.Thread.__init__(self)
-        self.volume_id = volume_id
-        self.workload_type = workload_type
-        self.delay_between_workload_generation = delay_between_workload_generation
-        self.proc = None
-        self.show_output = show_output
-        self.test_path = test_path
-
-    def start(self):
-        self.proc = Process(
-            target=StorageWorkloadGenerator.run_workload_generator,
-            args=(self,))
-
-        # tools.log("   Start test for volume: %s Time: %s" %
-        #           (self.cinder_volume_id, self.last_start_time))
-        self.proc.start()
-
-    def terminate(self):
-        self.proc.terminate()
-
-    @staticmethod
-    def run_workload_generator(generator_instance):
-
-        while True:
-
-            start_time = datetime.now()
-
-            command = CinderWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
-
-            # z.terminate()
-            # command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % generator_instance.volume_id
-            tools.log(
-                "   {run_f_test} Time: %s \ncommand: %s" %
-                (str(start_time), command), insert_db=False)
-
-            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
-                                         debug=False)
-
-            if err != "":
-                tools.log(
-                    type="ERROR",
-                    code="work_gen_run_fio",
-                    file_name="workload_generator.py",
-                    function_name="run_workload_generator",
-                    message="Time: %s\nVOLUME: %s" %
-                            (str(start_time), generator_instance.volume_id),
-                    exception=err)
-
-                break
-
-            duration = tools.get_time_difference(start_time)
-
-            iops_measured = tools.get_iops_measures_from_fio_output(out)
-
-            communication.insert_workload_generator(
-                experiment_id=CinderWorkloadGenerator.experiment["id"],
-                nova_id=tools.get_current_tenant_id(),
-                duration=duration,
-                read_iops=iops_measured["read"],
-                write_iops=iops_measured["write"],
-                command=command,
-                output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
-
-            if generator_instance.show_output == False:
-                out = "SHOW_OUTPUT = False"
-
-            tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                      (str(duration), str(iops_measured), generator_instance.volume_id, out, err),
-                      insert_db=False)
-
-            time.sleep(int(np.random.choice(
-                generator_instance.delay_between_workload_generation[0],
-                1,
-                p=generator_instance.delay_between_workload_generation[1]
-            )))
+from storage_workload_generator import StorageWorkloadGenerator
 
 
 class CinderWorkloadGenerator:
@@ -186,7 +97,7 @@ class CinderWorkloadGenerator:
             show_output=False,
             test_path=test_path)
 
-        generator.start()
+        # generator.start()
 
         return generator
 
@@ -225,6 +136,7 @@ class CinderWorkloadGenerator:
         return volume
 
     def attach_volume(self, instance_id, volume_id):
+
         '''
 
         :param instance_id:
@@ -288,16 +200,67 @@ class CinderWorkloadGenerator:
 
         print("try to mount_volume device: %s volume.id: %", device, volume.id)
 
-        out, err = tools.run_command(["sudo", 'mkfs', '-t', "ext3", device], debug=True)
+        log = ""
+
+        c1 = ["sudo", 'mkfs', '-t', "ext3", device]
+        out, err = tools.run_command(c1, debug=True)
+
+        if "in use by the system" in err:
+            tools.log(
+                type="ERROR",
+                code="work_gen_in_use",
+                file_name="workload_generator.py",
+                function_name="mount_volume",
+                message="%s out-->%s err-->%s  \n" % (c1, out, err)
+            )
+
+            return False
+
+        log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
 
         mount_to_path = base_path + volume.id
 
-        out, err = tools.run_command(["sudo", 'mkdir', mount_to_path])
+        c2 = ["sudo", 'mkdir', mount_to_path]
+        out, err = tools.run_command(c2, debug=True)
 
-        out, err = tools.run_command(["sudo", 'mount', device, mount_to_path], debug=True)
+        if err != "":
+            tools.log(
+                type="ERROR",
+                code="work_gen_mount_mkdir",
+                file_name="workload_generator.py",
+                function_name="mount_volume",
+                message="%s out-->%s err-->%s  \n" % (c2, out, err)
+            )
+
+            return False
+
+        log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
+
+        c3 = ["sudo", 'mount', device, mount_to_path]
+        out, err = tools.run_command(c3, debug=True)
+
+        if err != "":
+            tools.log(
+                type="ERROR",
+                code="work_gen_mount_mount",
+                file_name="workload_generator.py",
+                function_name="mount_volume",
+                message="%s out-->%s err-->%s  \n" % (c3, out, err)
+            )
+
+            return False
+
+        log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
+
+        tools.log(
+            type="INFO",
+            code="work_gen_mount_report",
+            file_name="workload_generator.py",
+            function_name="mount_volume",
+            message=log
+        )
 
         return True
-        # todo instead of 3 seconds
 
     def detach_delete_volume(self, cinder_volume_id, is_deleted=1):
 
@@ -414,19 +377,26 @@ class CinderWorkloadGenerator:
         attach_result = self.attach_volume(wg.current_vm_id, volume.id)
 
         if attach_result is not None:
+
+            tools.log(
+                type="INFO",
+                code="work_gen",
+                file_name="workload_generator.py",
+                function_name="create_attach_volume",
+                message="going to mount volume. cinder_reported_device: %s volume: %s" % (attach_result.device, volume.id)
+            )
+
             if self.mount_volume(
                     device_from_openstack_not_used=attach_result.device,
                     volume=volume) is False:
-                lg = tools.log(
+
+                tools.log(
                     type="WARNING",
                     code="work_gen_mount_failed",
                     file_name="workload_generator.py",
                     function_name="create_attach_volume",
                     message="cinder_reported_device:%s volume_id: %s" % (attach_result.device, volume.id)
                 )
-
-                raise Exception(lg)
-
                 # remove the volume
                 self.detach_delete_volume(
                     cinder_volume_id=volume.id,
@@ -521,7 +491,7 @@ class CinderWorkloadGenerator:
         volumes = []
 
         # try to reduce the chance of having concurrent attachment
-        time.sleep(round(random.uniform(0.5, 4.1), 2))
+        # time.sleep(round(random.uniform(0.5, 4.1), 2))
 
         while True:
 
@@ -530,7 +500,7 @@ class CinderWorkloadGenerator:
                 volume_id = self.create_attach_volume()
 
                 if volume_id is None:
-                    # if failed to create a volume wait for 30 sec then retry
+                    # if failed to create a volume wait for xx sec then retry
                     time.sleep(
                         int(np.random.choice(
                             self.wait_after_volume_rejected[0],
@@ -611,7 +581,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--wait_after_volume_rejected', default='[[30], [1.0]]', type=str, metavar='',
                         required=temp_required,
-                        help='valume rejcected wait before request for new volume. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+                        help='volume rejected wait before request for new volume. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
     args = parser.parse_args()
 
@@ -643,12 +613,13 @@ if __name__ == "__main__":
         wg.remove_all_available_volumes()
 
     elif "add" in args.commands:
-        tools.log("add,attach and mount a new volume", insert_db=False)
-        volume = wg.create_volume()
-        attach_result = wg.attach_volume(wg.current_vm_id, volume.id)
-
-        if attach_result is not None:
-            wg.mount_volume(attach_result.device, volume)
+        # tools.log("add,attach and mount a new volume", insert_db=False)
+        # volume = wg.create_volume()
+        # attach_result = wg.attach_volume(wg.current_vm_id, volume.id)
+        #
+        # if attach_result is not None:
+        #     wg.mount_volume(attach_result.device, volume)
+        pass
 
     elif "storage" in args.commands:
         # volume_id = "e48b41a6-c181-42eb-9b48-e04bcff02289"

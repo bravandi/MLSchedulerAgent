@@ -90,6 +90,8 @@ function c_cdr_SL(){
 
 function c_attachedVolumes(){
 	sudo fdisk -l | grep vd
+	sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+	sudo df | grep vd
 }
 
 function c_debugClient(){
