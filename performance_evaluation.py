@@ -69,8 +69,9 @@ class FIOTest:
         self.last_terminate_time = Array('c', str(datetime.now()))
 
         tools.log(
+            app="perf_eval",
             type="INFO",
-            code="perfeval",
+            code="terminate",
             file_name="performance_evaluation.py",
             function_name="terminate",
             message="TERMINATE After %s seconds VOLUME: %s Time: %s" %
@@ -232,8 +233,9 @@ class PerformanceEvaluation:
             except Exception as err:
                 # todo !important make sure the consistency of cached volume ides
                 tools.log(
+                    app="perf_eval",
                     type="ERROR",
-                    code="perfeval_concurrent_bug",
+                    code="concurrent_bug",
                     file_name="workload_generator.py",
                     function_name="run_storage_workload_generator",
                     message="could not create the fio test file for workload generator",
