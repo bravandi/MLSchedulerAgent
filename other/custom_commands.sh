@@ -29,15 +29,16 @@ function c_killPerformanceEvaluation(){
 
 function c_killWorkloadGenerator(){
 	sudo ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs sudo kill -9
+	sudo ps -ef | grep workload_runner | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 }
 
 function c_showPerfWork(){
     sudo echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    sudo echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     sudo ps aux | grep workload_generator.py
     sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-    sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
     sudo ps aux | grep performance_evaluation.py
+    sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+    sudo ps aux | grep workload_runner.py
 }
 
 function cp_run(){

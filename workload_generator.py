@@ -1,4 +1,6 @@
 import subprocess
+import fcntl
+import errno
 import argparse
 import os
 import tools
@@ -11,7 +13,6 @@ import pdb
 import numpy as np
 import sys
 import random
-from storage_workload_generator import StorageWorkloadGenerator
 
 
 class CinderWorkloadGenerator:
@@ -193,7 +194,7 @@ class CinderWorkloadGenerator:
                         file_name="workload_generator.py",
                         function_name="mount_volume",
                         message="already_attached_devices: %s \nnew_devic: %s \ntwo devices attached at the same time, can not identify which one should be mounted to which volume." % (
-                        already_attached_devices, new_device))
+                            already_attached_devices, new_device))
 
                     return False
 
@@ -385,13 +386,13 @@ class CinderWorkloadGenerator:
                 code="work_gen",
                 file_name="workload_generator.py",
                 function_name="create_attach_volume",
-                message="going to mount volume. cinder_reported_device: %s volume: %s" % (attach_result.device, volume.id)
+                message="going to mount volume. cinder_reported_device: %s volume: %s" % (
+                    attach_result.device, volume.id)
             )
 
             if self.mount_volume(
                     device_from_openstack_not_used=attach_result.device,
                     volume=volume) is False:
-
                 tools.log(
                     type="WARNING",
                     code="work_gen_mount_failed",
@@ -490,63 +491,113 @@ class CinderWorkloadGenerator:
     def start_simulation(self):
         self.detach_delete_all_volumes()
 
-        volumes = []
-
-        # try to reduce the chance of having concurrent attachment
-        # time.sleep(round(random.uniform(0.5, 4.1), 2))
-
         while True:
 
-            if len(volumes) < int(np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
-                c1 = ["sudo", 'nohup', 'python', '/home/ubuntu/MLSchedulerAgent/tools.py']
+            mounted_volumes = tools.get_mounted_volumes()
 
-                p = tools.run_command(c1, no_pipe=True)
+            if len(mounted_volumes) < int(
+                    np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
+                x = None
 
-                volumes.append({
-                    "id": "",
-                    "generator": "",
-                    "create_time": ""
-                })
+                try:
+                    x = open('/home/ubuntu/lock', 'a')
 
+                    while True:
+                        try:
+                            fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                            break
+                        except IOError as e:
+                            # raise on unrelated IOErrors
+                            if e.errno != errno.EAGAIN:
+                                raise e
+                            else:
+                                print("wait")
+                                time.sleep(0.5)
 
+                    fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    x.write("\nLOCK acquired %s" % (str(datetime.now())))
 
-                # volume_id = self.create_attach_volume()
-                #
-                # if volume_id is None:
-                #     # if failed to create a volume wait for xx sec then retry
-                #     time.sleep(
-                #         int(np.random.choice(
-                #             self.wait_after_volume_rejected[0],
-                #             1,
-                #             p=self.wait_after_volume_rejected[1]))
-                #     )
-                #
-                #     continue
-                #
-                # workload_generator = wg.run_storage_workload_generator(volume_id)
-                #
-                # volume_create_time = datetime.now()
-                #
-                # volumes.append({
-                #     "id": volume_id,
-                #     "generator": workload_generator,
-                #     "create_time": volume_create_time
-                # })
+                    volume = self.create_volume()
+
+                    volume_id = volume.id
+
+                    # todo !important have std.err and std.err separated
+                    process = tools.run_command(
+                        [
+                            "sudo", 'nohup', 'python', '/home/ubuntu/MLSchedulerAgent/workload_runner.py', 'start',
+                            "--fio_test_name", self.fio_test_name, "--volume_id", volume_id,
+                            "--delay_between_workload_generation", json.dumps(self.delay_between_workload_generation),
+                            "--volume_life_seconds", json.dumps(self.volume_life_seconds)
+                        ],
+                        no_pipe=True)
+
+                    check_lock = datetime.now()
+
+                    while volume_id not in mounted_volumes:
+
+                        if tools.get_time_difference(check_lock) > 20:
+                            # todo add a time out ... error management or something
+
+                            self.detach_delete_volume(volume_id, is_deleted=2)
+
+                            x.write("\nCOULD not mount the volume: " + volume_id)
+
+                            break
+
+                        time.sleep(0.5)
+                        mounted_volumes = tools.get_mounted_volumes()
+
+                    x.write("\nLOCK RELEASED volume attached: " + volume_id)
+
+                except Exception as err:
+                    print(err)
+
+                finally:
+                    fcntl.flock(x, fcntl.LOCK_UN)
+                    x.close()
+
+            time.sleep(0.5)
+
+            # todo add a log that volume is added
+
+            # time.sleep(round(random.uniform(0.5, 4.1), 2))
+            ##############################
+
+            # volume_id = self.create_attach_volume()
+            #
+            # if volume_id is None:
+            #     # if failed to create a volume wait for xx sec then retry
+            #     time.sleep(
+            #         int(np.random.choice(
+            #             self.wait_after_volume_rejected[0],
+            #             1,
+            #             p=self.wait_after_volume_rejected[1]))
+            #     )
+            #
+            #     continue
+            #
+            # workload_generator = wg.run_storage_workload_generator(volume_id)
+            #
+            # volume_create_time = datetime.now()
+            #
+            # volumes.append({
+            #     "id": volume_id,
+            #     "generator": workload_generator,
+            #     "create_time": volume_create_time
+            # })
 
             # for volume in volumes[:]:
             #
-                # if tools.get_time_difference(volume["create_time"]) > \
-                #         int(np.random.choice(
-                #             self.volume_life_seconds[0],
-                #             1,
-                #             p=self.volume_life_seconds[1])):
-                #     volume["generator"].terminate()
-                #
-                #     self.detach_delete_volume(volume["id"])
-                #
-                #     volumes.remove(volume)
-
-            time.sleep(0.5)
+            # if tools.get_time_difference(volume["create_time"]) > \
+            #         int(np.random.choice(
+            #             self.volume_life_seconds[0],
+            #             1,
+            #             p=self.volume_life_seconds[1])):
+            #     volume["generator"].terminate()
+            #
+            #     self.detach_delete_volume(volume["id"])
+            #
+            #     volumes.remove(volume)
 
 
 if __name__ == "__main__":
@@ -597,7 +648,6 @@ if __name__ == "__main__":
                         help='volume rejected wait before request for new volume. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
     args = parser.parse_args()
-    pdb.set_trace()
 
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),

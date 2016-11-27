@@ -465,9 +465,61 @@ def log(message,
     return msg
 
 
+def get_mounted_volumes():
+    out, err = run_command(["sudo", "df"], debug=False)
+
+    mounted = grep(out, "/media", openstack=False)
+
+    result = []
+
+    for m in mounted:
+        result.append(m.split("/media/")[1])
+
+    return result
+
+
+import fcntl
+import errno
+import sys
+
 if __name__ == "__main__":
-    a = 1
-    while True:
-        a= a +1
 
+    x = None
 
+    try:
+        x = open('/home/ubuntu/lock', 'a')
+
+        while True:
+            try:
+                fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except IOError as e:
+                # raise on unrelated IOErrors
+                if e.errno != errno.EAGAIN:
+                    raise e
+                else:
+                    print("wait")
+                    time.sleep(0.5)
+
+        fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        x.write(str(sys.argv) + " " + str(datetime.now()) + "\n")
+        print("locked")
+
+        time.sleep(10)
+
+        print("unlocked")
+
+    except Exception as err:
+        print(err)
+        pass
+    except IOError as e:
+        # raise on unrelated IOErrors
+        print(e)
+        if e.errno != errno.EAGAIN:
+            raise
+        else:
+            time.sleep(0.5)
+    finally:
+
+        fcntl.flock(x, fcntl.LOCK_UN)
+        x.close()
