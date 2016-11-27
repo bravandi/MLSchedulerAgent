@@ -45,6 +45,9 @@ class StorageWorkloadGenerator:
     def terminate(self):
         self.proc.terminate()
 
+    def is_terminated(self):
+        return self.proc.is_alive()
+
     @staticmethod
     def run_workload_generator(generator_instance):
 
@@ -74,7 +77,12 @@ class StorageWorkloadGenerator:
                     message="VOLUME: %s" % (generator_instance.volume_id),
                     exception=err)
 
-                break
+                if "file hash not empty on exit" in err:
+                    time.sleep(1)
+                    continue
+                else:
+                    # break
+                    continue
 
             duration = tools.get_time_difference(start_time)
 
@@ -82,6 +90,7 @@ class StorageWorkloadGenerator:
 
             communication.insert_workload_generator(
                 experiment_id=WorkloadRunner.experiment["id"],
+                cinder_id=generator_instance.volume_id,
                 nova_id=tools.get_current_tenant_id(),
                 duration=duration,
                 read_iops=iops_measured["read"],
@@ -124,11 +133,6 @@ class WorkloadRunner:
         self.delay_between_workload_generation = delay_between_workload_generation
         self.volume_id = volume_id
         self.volume_life_seconds = volume_life_seconds
-
-    def run_storage_workload_generator_all_volums(self):
-
-        for volume in tools.get_all_attached_volumes(self.current_vm_id):
-            self.run_storage_workload_generator(volume.id)
 
     def run_storage_workload_generator(self, volume_id):
 
@@ -471,7 +475,7 @@ class WorkloadRunner:
 
         if result:
 
-            generator = self.run_storage_workload_generator(self.volume_id)
+            # generator = self.run_storage_workload_generator(self.volume_id)
 
             while True:
 
@@ -483,11 +487,24 @@ class WorkloadRunner:
                             1,
                             p=self.volume_life_seconds[1])):
 
-                    generator.terminate()
+                    # generator.terminate()
 
                     self.detach_delete_volume(self.volume_id)
 
                     break
+
+                # if generator.is_terminated() is True:
+                #
+                #     lg = tools.log(
+                #         app="W_RUNNER",
+                #         type="ERROR",
+                #         code="early_terminated",
+                #         file_name="workload_generator.py",
+                #         function_name="start_simulation",
+                #         message="the storage workload generator is terminated unexpectedly. volume: %s" % ( self.volume_id))
+                #
+                #     raise Exception(lg)
+
 
         else:
             # todo save log that  it failed

@@ -18,6 +18,10 @@ function c_catErr(){
 	sudo find /home/ubuntu -type f -name '*.err' -exec cat {} +
 }
 
+function c_catOut(){
+	sudo find /home/ubuntu -type f -name '*.out' -exec cat {} +
+}
+
 function c_delErrOutFiles(){
 	 sudo rm /home/ubuntu/*.err
 	 sudo rm /home/ubuntu/*.out

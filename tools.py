@@ -129,6 +129,17 @@ def get_iops_measures_from_fio_output(out):
     return iops_measured
 
 
+def get_volume_status(volume_id):
+    cinder = get_cinder_client()
+
+    try:
+        vol_reload = cinder.volumes.get(volume_id)
+    except:
+        return None
+
+    return vol_reload.status
+
+
 def check_volume_status(volume_id, status):
     cinder = get_cinder_client()
 

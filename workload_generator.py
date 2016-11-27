@@ -306,25 +306,40 @@ class CinderWorkloadGenerator:
 
     def delete_volume(self, cinder_volume_id, is_deleted=1, mount_path="/media/"):
 
-        cinder = tools.get_cinder_client()
+        if cinder_volume_id is None:
+            return False
 
-        while True:
+        cinder_volume_id = cinder_volume_id.encode('ascii', 'ignore')
 
-            vol_reload = cinder.volumes.get(cinder_volume_id)
+        try:
+            cinder = tools.get_cinder_client()
 
-            if vol_reload.status != 'detaching':
-                break
+            while True:
+                vol_reload = cinder.volumes.get(cinder_volume_id)
 
-        if vol_reload.status == 'available':
-            cinder.volumes.delete(cinder_volume_id)
+                if vol_reload.status != 'detaching':
+                    break
+                time.sleep(0.2)
 
-            communication.delete_volume(
-                cinder_id=cinder_volume_id,
-                is_deleted=is_deleted
-            )
+            while True:
+                vol_reload = cinder.volumes.get(cinder_volume_id)
+                if vol_reload.status != 'creating':
+                    break
+                time.sleep(0.2)
 
-            # remove the path that volume were mounted to. Because the workload generator will keep using ndisk to consistantly write data into the disk
-            tools.run_command(["sudo", "rm", "-d", "-r", mount_path + cinder_volume_id])
+            if vol_reload.status == 'available':
+                cinder.volumes.delete(cinder_volume_id)
+
+                communication.delete_volume(
+                    cinder_id=cinder_volume_id,
+                    is_deleted=is_deleted
+                )
+
+                tools.run_command(["sudo", "rm", "-d", "-r", mount_path + cinder_volume_id])
+
+                return True
+        except:
+            return False
 
     def _delete_volume(self, volume_id, is_deleted=1):
         cinder = tools.get_cinder_client()
@@ -489,115 +504,110 @@ class CinderWorkloadGenerator:
                 self._delete_volume(volume.id)
 
     def start_simulation(self):
-        self.detach_delete_all_volumes()
 
+        volume_id = ""
+        create_time = datetime.now()
         while True:
 
-            mounted_volumes = tools.get_mounted_volumes()
+            volume_status = tools.get_volume_status(volume_id)
 
-            if len(mounted_volumes) < int(
-                    np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
-                x = None
+            # if volume_status == "in-use":
+            #     continue
 
-                try:
-                    x = open('/home/ubuntu/lock', 'a')
+            if volume_status is not None:
+                # lg = tools.log(
+                #     type="INFO",
+                #     code="work_gen",
+                #     file_name="workload_generator.py",
+                #     function_name="start_simulation",
+                #     message="check volume results. status: %s volume: %s" %
+                #             (str(volume_status), volume_id)
+                # )
+                time.sleep(0.1)
+                continue
+            else:
+                if tools.get_time_difference(create_time) > 15:
 
-                    while True:
-                        try:
-                            fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                            break
-                        except IOError as e:
-                            # raise on unrelated IOErrors
-                            if e.errno != errno.EAGAIN:
-                                raise e
-                            else:
-                                print("wait")
-                                time.sleep(0.5)
+                    self.delete_volume(volume_id)
 
-                    fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    x.write("\nLOCK acquired %s" % (str(datetime.now())))
+                # raise Exception(lg)
 
-                    volume = self.create_volume()
+            # todo handle other statuses like error most importantly
 
-                    volume_id = volume.id
+            x = None
 
-                    # todo !important have std.err and std.err separated
-                    process = tools.run_command(
-                        [
-                            "sudo", 'nohup', 'python', '/home/ubuntu/MLSchedulerAgent/workload_runner.py', 'start',
-                            "--fio_test_name", self.fio_test_name, "--volume_id", volume_id,
-                            "--delay_between_workload_generation", json.dumps(self.delay_between_workload_generation),
-                            "--volume_life_seconds", json.dumps(self.volume_life_seconds)
-                        ],
-                        no_pipe=True)
+            try:
+                x = open('/home/ubuntu/lock', 'a')
 
-                    check_lock = datetime.now()
+                while True:
+                    try:
+                        fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        break
+                    except IOError as e:
+                        # raise on unrelated IOErrors
+                        if e.errno != errno.EAGAIN:
+                            raise e
+                        else:
+                            print("wait")
+                            time.sleep(0.5)
 
-                    while volume_id not in mounted_volumes:
+                fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                x.write("\nLOCK acquired %s" % (str(datetime.now())))
+                create_time = datetime.now()
+                volume = self.create_volume()
 
-                        if tools.get_time_difference(check_lock) > 20:
-                            # todo add a time out ... error management or something
+                volume_id = volume.id
 
-                            self.detach_delete_volume(volume_id, is_deleted=2)
+                # try:
+                #     # todo !important have std.err and std.err separated
+                #     process = tools.run_command(
+                #         [
+                #             "sudo", 'nohup', 'python', '/home/ubuntu/MLSchedulerAgent/workload_runner.py', 'start',
+                #             "--fio_test_name", self.fio_test_name, "--volume_id", volume_id,
+                #             "--delay_between_workload_generation", json.dumps(self.delay_between_workload_generation),
+                #             "--volume_life_seconds", json.dumps(self.volume_life_seconds)
+                #         ],
+                #         no_pipe=True)
+                # except Exception as err:
+                #     # todo look for below
+                #     # nohup: ignoring input and appending output to 'nohup.out'
+                #     # *** Error in `sudo': malloc(): smallbin double linked list corrupted: 0x0000563c8b814a40 ***
+                #
+                #     self.delete_volume(volume_id)
+                #
+                #     continue
 
-                            x.write("\nCOULD not mount the volume: " + volume_id)
 
-                            break
+                # check_lock = datetime.now()
+                #
+                # mounted_volumes = []
+                #
+                # while volume_id not in mounted_volumes:
+                #
+                #     if tools.get_time_difference(check_lock) > 20:
+                #         # todo add a time out ... error management or something
+                #
+                #         self.detach_delete_volume(volume_id, is_deleted=2)
+                #
+                #         x.write("\nCOULD not mount the volume: " + volume_id)
+                #
+                #         break
+                #
+                #     time.sleep(0.5)
+                #     mounted_volumes = tools.get_mounted_volumes()
 
-                        time.sleep(0.5)
-                        mounted_volumes = tools.get_mounted_volumes()
+                x.write("\nLOCK RELEASED volume attached: " + volume_id)
 
-                    x.write("\nLOCK RELEASED volume attached: " + volume_id)
+            except Exception as err:
+                print(err)
 
-                except Exception as err:
-                    print(err)
+            finally:
+                fcntl.flock(x, fcntl.LOCK_UN)
+                x.close()
 
-                finally:
-                    fcntl.flock(x, fcntl.LOCK_UN)
-                    x.close()
-
-            time.sleep(0.5)
+            time.sleep(1)
 
             # todo add a log that volume is added
-
-            # time.sleep(round(random.uniform(0.5, 4.1), 2))
-            ##############################
-
-            # volume_id = self.create_attach_volume()
-            #
-            # if volume_id is None:
-            #     # if failed to create a volume wait for xx sec then retry
-            #     time.sleep(
-            #         int(np.random.choice(
-            #             self.wait_after_volume_rejected[0],
-            #             1,
-            #             p=self.wait_after_volume_rejected[1]))
-            #     )
-            #
-            #     continue
-            #
-            # workload_generator = wg.run_storage_workload_generator(volume_id)
-            #
-            # volume_create_time = datetime.now()
-            #
-            # volumes.append({
-            #     "id": volume_id,
-            #     "generator": workload_generator,
-            #     "create_time": volume_create_time
-            # })
-
-            # for volume in volumes[:]:
-            #
-            # if tools.get_time_difference(volume["create_time"]) > \
-            #         int(np.random.choice(
-            #             self.volume_life_seconds[0],
-            #             1,
-            #             p=self.volume_life_seconds[1])):
-            #     volume["generator"].terminate()
-            #
-            #     self.detach_delete_volume(volume["id"])
-            #
-            #     volumes.remove(volume)
 
 
 if __name__ == "__main__":

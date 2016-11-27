@@ -207,6 +207,7 @@ def delete_volume(
 
 def insert_workload_generator(
         experiment_id,
+        cinder_id,
         duration,
         read_iops,
         write_iops,
@@ -222,6 +223,7 @@ def insert_workload_generator(
 
     data = {
         "experiment_id": experiment_id,
+        "cinder_id": cinder_id,
         "tenant_id": tenant_id,
         "nova_id": nova_id,
         "duration": duration,
