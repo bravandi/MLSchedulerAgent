@@ -11,7 +11,7 @@ function c_killProc(){
 #		echo $KILLPID
 #	donea
 
-	sudo ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
+	sudo ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 }
 
 function c_catErr(){
@@ -24,11 +24,11 @@ function c_delErrOutFiles(){
 }
 
 function c_killPerformanceEvaluation(){
-	sudo ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs kill -9
+	sudo ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 }
 
 function c_killWorkloadGenerator(){
-	sudo ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs kill -9
+	sudo ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 }
 
 function c_showPerfWork(){

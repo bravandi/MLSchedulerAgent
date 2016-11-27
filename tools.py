@@ -268,7 +268,7 @@ def create_sequential_folder(path, folder_name):
     out, err = run_command(["sudo", 'mkdir', create_path])
 
 
-def run_command(parameters, debug=False):
+def run_command(parameters, debug=False, no_pipe=False):
     # shell = spur.SshShell(
     #     hostname="10.18.75.153",
     #     username="root",
@@ -279,20 +279,23 @@ def run_command(parameters, debug=False):
     # print(result.output)  # prints hello
     # if parameters[0] != "sudo":
     #     parameters.insert(0, "sudo")
-
-    p = subprocess.Popen(parameters,
-                         # [fio_path, volume_path + fio_test_name],
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-
     # todo create a centeralized error management here
 
-    out, err = p.communicate()
+    if no_pipe is True:
+        p = subprocess.Popen(parameters)
 
-    if debug:
-        print("\nrun_command:\n" + str(parameters) + "\nOUT -->" + out + "\nERROR --> " + err)
+        return p
 
-    return out, err
+    else:
+
+        p = subprocess.Popen(parameters, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        out, err = p.communicate()
+
+        if debug:
+            print("\nrun_command:\n" + str(parameters) + "\nOUT -->" + out + "\nERROR --> " + err)
+
+        return out, err
 
 
 def run_command2(command, debug=False):
@@ -463,14 +466,8 @@ def log(message,
 
 
 if __name__ == "__main__":
-    log(
-        'message',
-        type='type',
-        app='agent',
-        code='code',
-        file_name='file_name',
-        function_name='function_name',
-        exception='exception',
-        insert_db=True
-    )
-    pass
+    a = 1
+    while True:
+        a= a +1
+
+
