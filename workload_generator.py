@@ -14,6 +14,7 @@ import numpy as np
 import sys
 import random
 
+
 class StorageWorkloadGenerator:
     """
 
@@ -91,27 +92,42 @@ class StorageWorkloadGenerator:
                 message="   {run_f_test} Time: %s \ncommand: %s" %
                         (str(start_time), command), insert_db=False)
 
-            out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
-                                         debug=False)
+            try:
+                out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
+                                             debug=False)
 
-            if err != "":
+                if err != "":
+                    tools.log(
+                        app="W_STORAGE_GEN",
+                        type="ERROR",
+                        code="run_fio",
+                        file_name="workload_generator.py",
+                        function_name="run_workload_generator",
+                        message="VOLUME: %s" % (generator_instance.volume_id),
+                        exception=err)
+
+                    time.sleep(1)
+
+                    if "file hash not empty on exit" in err:
+
+                        continue
+                    else:
+                        # break
+                        continue
+
+            except Exception as err_ex:
                 tools.log(
                     app="W_STORAGE_GEN",
                     type="ERROR",
-                    code="run_fio",
+                    code="run_fio_cmd",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="VOLUME: %s" % (generator_instance.volume_id),
-                    exception=err)
+                    message="failed to run fio for VOLUME: %s" % (generator_instance.volume_id),
+                    exception=err_ex)
 
                 time.sleep(1)
 
-                if "file hash not empty on exit" in err:
-
-                    continue
-                else:
-                    # break
-                    continue
+                continue
 
             duration = tools.get_time_difference(start_time)
 
@@ -142,6 +158,7 @@ class StorageWorkloadGenerator:
                 1,
                 p=generator_instance.delay_between_workload_generation[1]
             )))
+
 
 class CinderWorkloadGenerator:
     # fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
@@ -280,12 +297,12 @@ class CinderWorkloadGenerator:
 
         # wait until the volume is ready
         if tools.cinder_wait_for_volume_status(volume_id, status="available") is False:
-            self._delete_volume(volume_id=volume_id)
+            self._delete_volume(volume_id=volume_id, is_deleted=2)
 
             tools.log(
                 app="work_gen",
                 type="WARNING",
-                code="concurrent_bug",
+                code="vol_status_error",
                 file_name="workload_generator.py",
                 function_name="attach_volume",
                 message="VOLUME DELETED because status is 'error' id: %s" % volume_id)
@@ -296,7 +313,17 @@ class CinderWorkloadGenerator:
 
         nova = tools.get_nova_client()
 
-        result = nova.volumes.create_server_volume(instance_id, volume_id)
+        try:
+            result = nova.volumes.create_server_volume(instance_id, volume_id)
+        except:
+            tools.log(
+                app="work_gen",
+                type="WARNING",
+                code="nova_attach_failed",
+                file_name="workload_generator.py",
+                function_name="attach_volume",
+                message="attach failed. id: %s" % volume_id)
+            return None
 
         return result
 
@@ -310,12 +337,38 @@ class CinderWorkloadGenerator:
 
         # todo I know there is a case that two volumes get attached at same time, therefore two devices gets ready and it only picks one of them this can cause testing/writing to a wrong volume since device maps the underlying attachment process. Therore must detach and remove the volume.
 
-        already_attached_devices = tools.get_attached_devices()
+        already_attached_devices = None
+        try:
+            already_attached_devices = tools.get_attached_devices()
+        except Exception as err:
+            tools.log(
+                app="work_gen",
+                type="ERROR",
+                code="get_attached_devices",
+                file_name="workload_generator.py",
+                function_name="mount_volume",
+                message="failed to get already_attached_devices. must try again but for now return false",
+                exception=err
+            )
+            return False
 
         # todo define a timeout !important
         # make sure the device is ready to be mounted
         while True:
-            new_device = tools.get_attached_devices() - already_attached_devices
+            try:
+                new_device = tools.get_attached_devices() - already_attached_devices
+            except Exception as err:
+                tools.log(
+                    app="work_gen",
+                    type="WARNING",
+                    code="get_attached_devices",
+                    file_name="workload_generator.py",
+                    function_name="mount_volume",
+                    message="failed to get attached devices. will retry in the while true loop.",
+                    exception=err
+                )
+
+                continue
 
             if len(new_device) > 0:
                 if len(new_device) > 1:
@@ -336,59 +389,85 @@ class CinderWorkloadGenerator:
         print("try to mount_volume device: %s volume.id: %", device, volume.id)
 
         log = ""
-
-        c1 = ["sudo", 'mkfs', '-t', "ext3", device]
-        out, err = tools.run_command(c1, debug=True)
-
-        if "in use by the system" in err:
+        try:
+            c1 = ["sudo", 'mkfs', '-t', "ext3", device]
+            out, err = tools.run_command(c1, debug=True)
+            if "in use by the system" in err:
+                tools.log(
+                    app="work_gen",
+                    type="ERROR",
+                    code="in_use",
+                    file_name="workload_generator.py",
+                    function_name="mount_volume",
+                    message="cannot mount because it is in use. %s out-->%s err-->%s  \n" % (c1, out, err)
+                )
+                return False
+            log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
+        except Exception as err:
             tools.log(
                 app="work_gen",
-                type="ERROR",
-                code="in_use",
+                type="WARNING",
+                code="mkfs_failed",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="cannot mount because it is in use. %s out-->%s err-->%s  \n" % (c1, out, err)
+                message="failed to run mkfs. return False",
+                exception=err
             )
-
             return False
-
-        log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
 
         mount_to_path = base_path + volume.id
 
-        c2 = ["sudo", 'mkdir', mount_to_path]
-        out, err = tools.run_command(c2, debug=True)
-
-        if err != "":
+        try:
+            c2 = ["sudo", 'mkdir', mount_to_path]
+            out, err = tools.run_command(c2, debug=True)
+            if err != "":
+                tools.log(
+                    app="work_gen",
+                    type="ERROR",
+                    code="mount_mkdir",
+                    file_name="workload_generator.py",
+                    function_name="mount_volume",
+                    message="%s out-->%s err-->%s  \n" % (c2, out, err)
+                )
+                return False
+            log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
+        except Exception as err:
             tools.log(
                 app="work_gen",
-                type="ERROR",
-                code="mount_mkdir",
+                type="WARNING",
+                code="mkdir_failed",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="%s out-->%s err-->%s  \n" % (c2, out, err)
+                message="failed to run mkdir. return False",
+                exception=err
             )
-
             return False
 
-        log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
-
-        c3 = ["sudo", 'mount', device, mount_to_path]
-        out, err = tools.run_command(c3, debug=True)
-
-        if err != "":
+        try:
+            c3 = ["sudo", 'mount', device, mount_to_path]
+            out, err = tools.run_command(c3, debug=True)
+            if err != "":
+                tools.log(
+                    app="work_gen",
+                    type="ERROR",
+                    code="mount_mount",
+                    file_name="workload_generator.py",
+                    function_name="mount_volume",
+                    message="%s out-->%s err-->%s  \n" % (c3, out, err)
+                )
+                return False
+            log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
+        except Exception as err:
             tools.log(
                 app="work_gen",
-                type="ERROR",
-                code="mount_mount",
+                type="WARNING",
+                code="mount_failed",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="%s out-->%s err-->%s  \n" % (c3, out, err)
+                message="failed to run mount. return False",
+                exception=err
             )
-
             return False
-
-        log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
 
         tools.log(
             app="work_gen",
@@ -475,7 +554,15 @@ class CinderWorkloadGenerator:
                 tools.run_command(["sudo", "rm", "-d", "-r", mount_path + cinder_volume_id])
 
                 return True
-        except:
+        except Exception as err:
+            tools.log(
+                app="work_gen",
+                type="WARNING",
+                code="del_vol_failed",
+                file_name="workload_generator.py",
+                function_name="delete_volume",
+                message="error in delete volume. maybe failed to run 'rm' command because of memory shortage",
+                exception=err)
             return False
 
     def _delete_volume(self, volume_id, is_deleted=1):
@@ -545,9 +632,11 @@ class CinderWorkloadGenerator:
                     attach_result.device, volume.id)
             )
 
-            if self.mount_volume(
-                    device_from_openstack_not_used=attach_result.device,
-                    volume=volume) is False:
+            mount_result = self.mount_volume(
+                device_from_openstack_not_used=attach_result.device,
+                volume=volume)
+
+            if mount_result is False:
                 tools.log(
                     app="work_gen",
                     type="WARNING",
@@ -630,11 +719,33 @@ class CinderWorkloadGenerator:
                 if vol_reload.status == 'available':
                     self._delete_volume(volume.id)
 
-                    tools.run_command(["sudo", "rm", "-d", "-r", mount_path + volume.id])
+                    try:
+                        tools.run_command(["sudo", "rm", "-d", "-r", mount_path + volume.id])
+                    except Exception as err:
+                        tools.log(
+                            app="work_gen",
+                            type="WARNING",
+                            code="failed_rm_dir",
+                            file_name="workload_generator.py",
+                            function_name="detach_delete_all_volumes",
+                            message="failed to remove mounted directory. vol: " + volume.id,
+                            exception=err)
+                        return False
 
                     volumes.remove(volume)
 
-        tools.run_command(["sudo", "rm", "-d", "-r", mount_path + "*"])
+        try:
+            tools.run_command(["sudo", "rm", "-d", "-r", mount_path + "*"])
+        except Exception as err:
+            tools.log(
+                app="work_gen",
+                type="WARNING",
+                code="failed_rm_all",
+                file_name="workload_generator.py",
+                function_name="detach_delete_all_volumes",
+                message="failed to remove all mounted directories.",
+                exception=err)
+            return False
 
     def remove_all_available_volumes(self):
         print("remove_all_available_volumes()")
@@ -676,8 +787,11 @@ class CinderWorkloadGenerator:
                             self.volume_life_seconds[0],
                             1,
                             p=self.volume_life_seconds[1])):
+                    #
                     volume["generator"].terminate()
+
                     self.detach_delete_volume(volume["id"])
+
                     volumes.remove(volume)
 
             time.sleep(0.5)
@@ -707,10 +821,9 @@ class CinderWorkloadGenerator:
                 continue
             else:
                 if tools.get_time_difference(create_time) > 15:
-
                     self.delete_volume(volume_id)
 
-                # raise Exception(lg)
+                    # raise Exception(lg)
 
             # todo handle other statuses like error most importantly
 
