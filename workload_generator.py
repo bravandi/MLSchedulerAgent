@@ -103,7 +103,7 @@ class StorageWorkloadGenerator:
                         code="run_fio",
                         file_name="workload_generator.py",
                         function_name="run_workload_generator",
-                        message="VOLUME: %s" % (generator_instance.volume_id),
+                        message="failed to run fio in storage workload generator. volume: %s" % (generator_instance.volume_id),
                         exception=err)
 
                     time.sleep(1)
@@ -813,17 +813,17 @@ class CinderWorkloadGenerator:
                             message="failed to terminate the performance evaluator. volume:" + volume["id"],
                             exception=err)
 
-                    try:
-                        self.detach_delete_volume(volume["id"])
-                    except Exception as err:
-                        tools.log(
-                            app="work_gen",
-                            type="ERROR",
-                            code="failed_detach_delete_volume",
-                            file_name="workload_generator.py",
-                            function_name="start_simulation",
-                            message="failed to detach delete volume. volume:" + volume["id"],
-                            exception=err)
+                    # try:
+                    self.detach_delete_volume(volume["id"])
+                    # except Exception as err:
+                    #     tools.log(
+                    #         app="work_gen",
+                    #         type="ERROR",
+                    #         code="failed_detach_delete_volume",
+                    #         file_name="workload_generator.py",
+                    #         function_name="start_simulation",
+                    #         message="failed to detach delete volume. volume:" + volume["id"],
+                    #         exception=err)
 
                     volumes.remove(volume)
 
