@@ -99,9 +99,16 @@ class PerformanceEvaluationFIOTest:
     def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time):
 
         tools.log(
-            "   {run_f_test} Time: %s \ncommand: %s" %
-            (str(test_instance.last_start_time.value),
-             PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path), insert_db=False)
+            app="perf_eval",
+            type="info",
+            code="start_perf_fio",
+            file_name="performance_evaluation.py",
+            function_name="run_f_test",
+            message="Time: %s Command: %s" % (
+                str(test_instance.last_start_time.value),
+                PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path
+            ),
+            insert_db=False)
 
         out, err = tools.run_command(
             ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
@@ -131,10 +138,16 @@ class PerformanceEvaluationFIOTest:
         if test_instance.show_output == False:
             out = "SHOW_OUTPUT = False"
 
-        tools.log(" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                  (str(duration), str(iops_measured), test_instance.cinder_volume_id, out, err), insert_db=False)
-        tools.log("    IOPS %s: duration: %s" % (iops_measured, str(duration)), insert_db=False)
-        # return IOPS, difference.total_seconds(), out
+        tools.log(
+            app="perf_eval",
+            type="info",
+            code="perf_fio_done",
+            file_name="performance_evaluation.py",
+            function_name="run_f_test",
+            message=" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" % (
+                str(duration), str(iops_measured), test_instance.cinder_volume_id, out, err
+            ),
+            insert_db=False)
 
 
 class PerformanceEvaluation:
@@ -264,63 +277,26 @@ class PerformanceEvaluation:
 
     def run_fio_test(self):
 
-        prev = datetime.now()
-        while True:
+        attached_volumes = tools.get_all_attached_volumes(self.current_vm_id)
+        attached_volume_idies = [v.id for v in attached_volumes]
 
-            if tools.get_time_difference(prev) > 2:
+        self.terminate_fio_signals_from_workload_generator = []
 
-                attached_volumes = tools.get_all_attached_volumes(self.current_vm_id)
-                attached_volume_idies = [v.id for v in attached_volumes]
+        for volume in attached_volumes:
+            #
+            if volume.id not in self.terminate_fio_signals_from_workload_generator:
+                #
+                self.fio_test(cinder_volume_id=volume.id,
+                              test_name=self.fio_test_name)
 
-                for volume in attached_volumes:
-                    #
-                    if volume.id not in self.terminate_fio_signals_from_workload_generator:
-                        #
-                        self.fio_test(cinder_volume_id=volume.id,
-                                      test_name=self.fio_test_name)
-
-                for signaled_volume_id in self.terminate_fio_signals_from_workload_generator[:]:
-                    if signaled_volume_id not in attached_volume_idies:
-                        self.terminate_fio_signals_from_workload_generator.remove(signaled_volume_id)
-
-                prev = datetime.now()
+        for signaled_volume_id in self.terminate_fio_signals_from_workload_generator[:]:
+            if signaled_volume_id not in attached_volume_idies:
+                self.terminate_fio_signals_from_workload_generator.remove(signaled_volume_id)
 
     def report_available_iops(self):
 
         pass
 
 
-# print args.accumulate(args.integers)
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Volumes QoS performance evaluator.')
-
-    parser.add_argument('--fio_test_name', default="resource_evaluation.fio", metavar='', type=str,
-                        required=False,
-                        help='Test name for fio')
-
-    parser.add_argument('--terminate_if_takes', metavar='', type=int, required=False, default=150,
-                        help='terminates an evaluation if takes more than specified seconds')
-
-    parser.add_argument('--restart_gap', metavar='', type=int, required=False, default=20,
-                        help='gap between restarting each fio test')
-
-    parser.add_argument('--restart_gap_after_terminate', metavar='', type=int, required=False, default=50,
-                        help='If terminated because of the TERMINATE_IF_TAKES, then restart after specified seconds')
-
-    parser.add_argument('--show_fio_output', type=str, metavar='', required=False, default='False',
-                        help='show fio test output')
-
-    args = parser.parse_args()
-
-    p = PerformanceEvaluation(
-        current_vm_id=tools.get_current_tenant_id(),
-
-        fio_test_name=args.fio_test_name,
-        terminate_if_takes=args.terminate_if_takes,
-        restart_gap=args.restart_gap,
-        restart_gap_after_terminate=args.restart_gap_after_terminate,
-        show_fio_output=tools.str2bool(args.show_fio_output)
-    )
-
-    p.run_fio_test()
+    pass

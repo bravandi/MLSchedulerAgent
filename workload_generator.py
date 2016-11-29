@@ -86,8 +86,6 @@ class StorageWorkloadGenerator:
 
             command = CinderWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
 
-            # z.terminate()
-            # command = "/usr/bin/ndisk/ndisk_8.4_linux_x86_64.bin -R -r 80 -b 32k -M 3 -f /media/%s/F000 -t 3600 -C 2M \n" % generator_instance.volume_id
             tools.log(
                 app="W_STORAGE_GEN",
                 message="   {run_f_test} Time: %s \ncommand: %s" %
@@ -485,8 +483,6 @@ class CinderWorkloadGenerator:
         return True
 
     def detach_delete_volume(self, cinder_volume_id, is_deleted=1):
-        # kill fio performance evals if running
-        tools.kill_proc(cinder_volume_id)
 
         self.detach_volume(cinder_volume_id)
         self.delete_volume(
@@ -570,7 +566,6 @@ class CinderWorkloadGenerator:
             return False
 
     def _delete_volume(self, volume_id, is_deleted=1):
-        tools.kill_proc(volume_id)
 
         cinder = tools.get_cinder_client()
 
@@ -794,122 +789,47 @@ class CinderWorkloadGenerator:
                             1,
                             p=self.volume_life_seconds[1])):
                     # terminate fio tests on the performance eval instance
-                    volume["generator"].terminate(volumes["id"])
+                    try:
+                        volume["generator"].terminate()
+                    except Exception as err:
+                        tools.log(
+                            app="work_gen",
+                            type="ERROR",
+                            code="failed_terminate_generator",
+                            file_name="workload_generator.py",
+                            function_name="start_simulation",
+                            message="failed to terminate the volume workload generator. volume:" + volume["id"],
+                            exception=err)
 
-                    self.performance_evaluation_instance.terminate_fio_test()
+                    try:
+                        self.performance_evaluation_instance.terminate_fio_test(volume["id"])
+                    except Exception as err:
+                        tools.log(
+                            app="work_gen",
+                            type="ERROR",
+                            code="failed_terminate_perf_eval",
+                            file_name="workload_generator.py",
+                            function_name="start_simulation",
+                            message="failed to terminate the performance evaluator. volume:" + volume["id"],
+                            exception=err)
 
-                    self.detach_delete_volume(volume["id"])
+                    try:
+                        self.detach_delete_volume(volume["id"])
+                    except Exception as err:
+                        tools.log(
+                            app="work_gen",
+                            type="ERROR",
+                            code="failed_detach_delete_volume",
+                            file_name="workload_generator.py",
+                            function_name="start_simulation",
+                            message="failed to detach delete volume. volume:" + volume["id"],
+                            exception=err)
 
                     volumes.remove(volume)
 
+            self.performance_evaluation_instance.run_fio_test()
+
             time.sleep(0.5)
-
-    def start_simulation2(self):
-
-        volume_id = ""
-        create_time = datetime.now()
-        while True:
-
-            volume_status = tools.get_volume_status(volume_id)
-
-            # if volume_status == "in-use":
-            #     continue
-
-            if volume_status is not None:
-                # lg = tools.log(
-                #     app="work_gen",
-                #     type="vol_result",
-                #     code="work_gen",
-                #     file_name="workload_generator.py",
-                #     function_name="start_simulation",
-                #     message="check volume results. status: %s volume: %s" %
-                #             (str(volume_status), volume_id)
-                # )
-                time.sleep(0.1)
-                continue
-            else:
-                if tools.get_time_difference(create_time) > 15:
-                    self.delete_volume(volume_id)
-
-                    # raise Exception(lg)
-
-            # todo handle other statuses like error most importantly
-
-            x = None
-
-            try:
-                x = open('/home/ubuntu/lock', 'a')
-
-                while True:
-                    try:
-                        fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                        break
-                    except IOError as e:
-                        # raise on unrelated IOErrors
-                        if e.errno != errno.EAGAIN:
-                            raise e
-                        else:
-                            print("wait")
-                            time.sleep(0.5)
-
-                fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                x.write("\nLOCK acquired %s" % (str(datetime.now())))
-                create_time = datetime.now()
-                volume = self.create_volume()
-
-                volume_id = volume.id
-
-                # try:
-                #     # todo !important have std.err and std.err separated
-                #     process = tools.run_command(
-                #         [
-                #             "sudo", 'nohup', 'python', '/home/ubuntu/MLSchedulerAgent/workload_runner.py', 'start',
-                #             "--fio_test_name", self.fio_test_name, "--volume_id", volume_id,
-                #             "--delay_between_workload_generation", json.dumps(self.delay_between_workload_generation),
-                #             "--volume_life_seconds", json.dumps(self.volume_life_seconds)
-                #         ],
-                #         no_pipe=True)
-                # except Exception as err:
-                #     # todo look for below
-                #     # nohup: ignoring input and appending output to 'nohup.out'
-                #     # *** Error in `sudo': malloc(): smallbin double linked list corrupted: 0x0000563c8b814a40 ***
-                #
-                #     self.delete_volume(volume_id)
-                #
-                #     continue
-
-
-                # check_lock = datetime.now()
-                #
-                # mounted_volumes = []
-                #
-                # while volume_id not in mounted_volumes:
-                #
-                #     if tools.get_time_difference(check_lock) > 20:
-                #         # todo add a time out ... error management or something
-                #
-                #         self.detach_delete_volume(volume_id, is_deleted=2)
-                #
-                #         x.write("\nCOULD not mount the volume: " + volume_id)
-                #
-                #         break
-                #
-                #     time.sleep(0.5)
-                #     mounted_volumes = tools.get_mounted_volumes()
-
-                x.write("\nLOCK RELEASED volume attached: " + volume_id)
-
-            except Exception as err:
-                print(err)
-
-            finally:
-                fcntl.flock(x, fcntl.LOCK_UN)
-                x.close()
-
-            time.sleep(1)
-
-            # todo add a log that volume is added
-
 
 if __name__ == "__main__":
 
@@ -1034,4 +954,3 @@ if __name__ == "__main__":
 
     elif "start" in args.commands:
         wg.start_simulation()
-        p.run_fio_test()
