@@ -489,48 +489,28 @@ def get_mounted_volumes():
     return result
 
 
-import fcntl
-import errno
-import sys
+def kill_proc(contains):
+    try:
+        # command = "sudo ps -ef | grep %s | grep -v grep | awk '{print $2}' | xargs sudo kill -9" % contains
+        # command = "c_killProc " + contains
+        # task = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+        # task = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+
+        os.system("killall -9 " + contains);
+    except Exception as err:
+        log(
+            type="ERROR",
+            code="kill_failed",
+            file_name="tools.py",
+            function_name="kill_proc",
+            message="tried to kill procs that contains: %s" % contains,
+            exception=err
+        )
+
+        # assert task.wait() == 0
+
 
 if __name__ == "__main__":
-
-    x = None
-
-    try:
-        x = open('/home/ubuntu/lock', 'a')
-
-        while True:
-            try:
-                fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except IOError as e:
-                # raise on unrelated IOErrors
-                if e.errno != errno.EAGAIN:
-                    raise e
-                else:
-                    print("wait")
-                    time.sleep(0.5)
-
-        fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        x.write(str(sys.argv) + " " + str(datetime.now()) + "\n")
-        print("locked")
-
-        time.sleep(10)
-
-        print("unlocked")
-
-    except Exception as err:
-        print(err)
-        pass
-    except IOError as e:
-        # raise on unrelated IOErrors
-        print(e)
-        if e.errno != errno.EAGAIN:
-            raise
-        else:
-            time.sleep(0.5)
-    finally:
-
-        fcntl.flock(x, fcntl.LOCK_UN)
-        x.close()
+    kill_proc("workload_")
+    print "DOOOOONE"
+    pass

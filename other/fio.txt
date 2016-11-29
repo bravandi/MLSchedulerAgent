@@ -1,3 +1,6 @@
+Very good examples:
+    https://wiki.mikejung.biz/Benchmarking#Fio_Test_Options_and_Examples
+
 More complete bad format:
     https://linux.die.net/man/1/fio
 

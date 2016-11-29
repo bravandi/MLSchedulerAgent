@@ -13,6 +13,7 @@ import pdb
 import numpy as np
 import sys
 import random
+import performance_evaluation as perf
 
 
 class StorageWorkloadGenerator:
@@ -93,8 +94,9 @@ class StorageWorkloadGenerator:
                         (str(start_time), command), insert_db=False)
 
             try:
-                out, err = tools.run_command(["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
-                                             debug=False)
+                out, err = tools.run_command(
+                    ["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
+                    debug=False)
 
                 if err != "":
                     tools.log(
@@ -179,6 +181,7 @@ class CinderWorkloadGenerator:
                  request_read_iops,
                  request_write_iops,
                  wait_after_volume_rejected,
+                 performance_evaluation_instance,
                  workload_id=0):
         """
 
@@ -199,6 +202,7 @@ class CinderWorkloadGenerator:
         self.max_number_volumes = max_number_volumes
         self.volume_size = volume_size
         self.volume_life_seconds = volume_life_seconds
+        self.performance_evaluation_instance = performance_evaluation_instance
 
     def run_storage_workload_generator_all_volums(self):
 
@@ -481,6 +485,8 @@ class CinderWorkloadGenerator:
         return True
 
     def detach_delete_volume(self, cinder_volume_id, is_deleted=1):
+        # kill fio performance evals if running
+        tools.kill_proc(cinder_volume_id)
 
         self.detach_volume(cinder_volume_id)
         self.delete_volume(
@@ -544,10 +550,8 @@ class CinderWorkloadGenerator:
                 time.sleep(0.2)
 
             if vol_reload.status == 'available':
-                cinder.volumes.delete(cinder_volume_id)
-
-                communication.delete_volume(
-                    cinder_id=cinder_volume_id,
+                self._delete_volume(
+                    volume_id=cinder_volume_id,
                     is_deleted=is_deleted
                 )
 
@@ -566,6 +570,8 @@ class CinderWorkloadGenerator:
             return False
 
     def _delete_volume(self, volume_id, is_deleted=1):
+        tools.kill_proc(volume_id)
+
         cinder = tools.get_cinder_client()
 
         cinder.volumes.delete(volume_id)
@@ -787,8 +793,10 @@ class CinderWorkloadGenerator:
                             self.volume_life_seconds[0],
                             1,
                             p=self.volume_life_seconds[1])):
-                    #
-                    volume["generator"].terminate()
+                    # terminate fio tests on the performance eval instance
+                    volume["generator"].terminate(volumes["id"])
+
+                    self.performance_evaluation_instance.terminate_fio_test()
 
                     self.detach_delete_volume(volume["id"])
 
@@ -949,8 +957,38 @@ if __name__ == "__main__":
     parser.add_argument('--wait_after_volume_rejected', default='[[30], [1.0]]', type=str, metavar='',
                         required=temp_required,
                         help='volume rejected wait before request for new volume. For example for det-del a single volume. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+    # Performance Evaluation Parameters
+
+    parser.add_argument('--perf_fio_test_name', default="resource_evaluation.fio", metavar='', type=str,
+                        required=False,
+                        help='Test name for fio')
+
+    parser.add_argument('--perf_terminate_if_takes', metavar='', type=int, required=False, default=150,
+                        help='terminates an evaluation if takes more than specified seconds')
+
+    parser.add_argument('--perf_restart_gap', metavar='', type=int, required=False, default=20,
+                        help='gap between restarting each fio test')
+
+    parser.add_argument('--perf_restart_gap_after_terminate', metavar='', type=int, required=False, default=50,
+                        help='If terminated because of the TERMINATE_IF_TAKES, then restart after specified seconds')
+
+    parser.add_argument('--perf_show_fio_output', type=str, metavar='', required=False, default='False',
+                        help='show fio test output')
+
+    # Performance Evaluation Parameters
+
 
     args = parser.parse_args()
+
+    p = perf.PerformanceEvaluation(
+        current_vm_id=tools.get_current_tenant_id(),
+
+        fio_test_name=args.perf_fio_test_name,
+        terminate_if_takes=args.perf_terminate_if_takes,
+        restart_gap=args.perf_restart_gap,
+        restart_gap_after_terminate=args.perf_restart_gap_after_terminate,
+        show_fio_output=tools.str2bool(args.perf_show_fio_output)
+    )
 
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
@@ -962,7 +1000,8 @@ if __name__ == "__main__":
         delay_between_workload_generation=json.loads(args.delay_between_workload_generation),
         max_number_volumes=json.loads(args.max_number_volumes),
         volume_life_seconds=json.loads(args.volume_life_seconds),
-        volume_size=json.loads(args.volume_size)
+        volume_size=json.loads(args.volume_size),
+        performance_evaluation_instance=p
     )
 
     if "det-del" in args.commands:
@@ -995,3 +1034,4 @@ if __name__ == "__main__":
 
     elif "start" in args.commands:
         wg.start_simulation()
+        p.run_fio_test()

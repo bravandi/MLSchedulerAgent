@@ -16,6 +16,7 @@ size=16m
 
 readwrite=randrw
 rwmixread=75
+rwmixwrite=25
 #rwmixread=75
 
 [resource_evaluation]
