@@ -4,7 +4,7 @@ from datetime import datetime
 import communication
 import time
 import os
-from multiprocessing import Process, Array
+from multiprocessing import Process, Array, Value
 import pdb
 
 
@@ -34,6 +34,7 @@ class PerformanceEvaluationFIOTest:
         self.last_start_time = tmp
         self.last_end_time = tmp
         self.last_terminate_time = tmp
+        self.kill = False
         self.proc = None
         self.show_output = show_output
 
@@ -47,21 +48,28 @@ class PerformanceEvaluationFIOTest:
         return tools.convert_string_datetime(self.last_terminate_time.value)
 
     def start(self):
+        if self.is_alive() is True:
+
+            return False
+
         self.last_start_time = Array('c', str(datetime.now()))
         self.last_end_time = Array('c', " " * 26)
         self.last_terminate_time = Array('c', " " * 26)
+        self.kill = Value('i', 0)
 
         self.proc = Process(
             target=PerformanceEvaluationFIOTest.run_f_test,
             args=(self,
                   self.last_start_time,
                   self.last_end_time,
-                  self.last_terminate_time,))
+                  self.last_terminate_time,
+                  self.kill,))
 
         # tools.log("   Start test for volume: %s Time: %s" %
         #           (self.cinder_volume_id, self.last_start_time))
         self.proc.start()
 
+        return True
         # print("ZZZZZZZZZZZZZZZZZ" + self.last_end_time.value)
 
     def terminate(self, after_seconds=-1):
@@ -87,7 +95,7 @@ class PerformanceEvaluationFIOTest:
                 message="TERMINATE After %s seconds VOLUME: %s Time: %s" %
                         (str(after_seconds), self.cinder_volume_id, self.last_terminate_time.value))
 
-        self.proc.terminate()
+        self.kill = Value('i', 1)
 
     def is_alive(self):
         if self.proc == None:
@@ -96,7 +104,19 @@ class PerformanceEvaluationFIOTest:
         return self.proc.is_alive()
 
     @staticmethod
-    def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time):
+    def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time, kill):
+
+        if kill == 1:
+            tools.log(
+                app="perf_eval",
+                type="DEBUG",
+                code="DEBUG_check_kill",
+                file_name="performance_evaluation.py",
+                function_name="run_f_test",
+                message="kill variable value is changed"
+            )
+
+            return
 
         tools.log(
             app="perf_eval",
@@ -110,8 +130,41 @@ class PerformanceEvaluationFIOTest:
             ),
             insert_db=False)
 
-        out, err = tools.run_command(
-            ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
+        out = ""
+        err =""
+        p = None
+
+        try:
+            out, err, p = tools.run_command(
+                ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
+
+            if err != "":
+                tools.log(
+                    app="W_STORAGE_GEN",
+                    type="ERROR",
+                    code="run_fio",
+                    file_name="workload_generator.py",
+                    function_name="run_workload_generator",
+                    message="failed to run fio in storage workload generator. volume: %s" % (
+                        test_instance.cinder_volume_id),
+                    exception=err)
+
+                tools.kill_proc(p.pid)
+
+        except Exception as err_ex:
+            tools.log(
+                app="W_STORAGE_GEN",
+                type="ERROR",
+                code="run_fio_cmd",
+                file_name="workload_generator.py",
+                function_name="run_workload_generator",
+                message="failed to run fio for perf test. PID: %s VOLUME: %s" %
+                        (str(p.pid), test_instance.cinder_volume_id),
+                exception=err_ex)
+
+            tools.kill_proc(p.pid)
+
+            return
 
         iops_measured = tools.get_iops_measures_from_fio_output(out)
 
@@ -153,7 +206,7 @@ class PerformanceEvaluationFIOTest:
 class PerformanceEvaluation:
     # fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
     fio_bin_path = "fio"
-    fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
+    fio_tests_conf_path = tools.get_path_expanduser("MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
     experiment = None
     f_test_instances = {}
@@ -167,7 +220,6 @@ class PerformanceEvaluation:
         self.restart_gap = restart_gap
         self.restart_gap_after_terminate = restart_gap_after_terminate
         self.show_fio_output = show_fio_output
-        self.terminate_fio_signals_from_workload_generator = []
 
         PerformanceEvaluation.experiment = communication.Communication.get_current_experiment()
 
@@ -183,9 +235,6 @@ class PerformanceEvaluation:
 
         if PerformanceEvaluation.f_test_instances.has_key(cinder_id):
             PerformanceEvaluation.f_test_instances[cinder_id].terminate()
-
-        if cinder_id not in self.terminate_fio_signals_from_workload_generator:
-            self.terminate_fio_signals_from_workload_generator.append(cinder_id)
 
     def fio_test(self, cinder_volume_id, test_name):
 
@@ -278,20 +327,10 @@ class PerformanceEvaluation:
     def run_fio_test(self):
 
         attached_volumes = tools.get_all_attached_volumes(self.current_vm_id)
-        attached_volume_idies = [v.id for v in attached_volumes]
-
-        self.terminate_fio_signals_from_workload_generator = []
 
         for volume in attached_volumes:
-            #
-            if volume.id not in self.terminate_fio_signals_from_workload_generator:
-                #
-                self.fio_test(cinder_volume_id=volume.id,
-                              test_name=self.fio_test_name)
-
-        for signaled_volume_id in self.terminate_fio_signals_from_workload_generator[:]:
-            if signaled_volume_id not in attached_volume_idies:
-                self.terminate_fio_signals_from_workload_generator.remove(signaled_volume_id)
+            self.fio_test(cinder_volume_id=volume.id,
+                          test_name=self.fio_test_name)
 
     def report_available_iops(self):
 

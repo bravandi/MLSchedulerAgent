@@ -38,6 +38,9 @@ class StorageWorkloadGenerator:
         self.test_path = test_path
 
     def start(self):
+        if self.is_alive() is True:
+            return False
+
         self.proc = Process(
             target=StorageWorkloadGenerator.run_workload_generator,
             args=(self,))
@@ -46,124 +49,136 @@ class StorageWorkloadGenerator:
         #           (self.cinder_volume_id, self.last_start_time))
         self.proc.start()
 
+        return True
+
     def terminate(self):
         if self.proc is None:
             tools.log(
                 app="W_STORAGE_GEN",
                 type="ERROR",
-                code="proc_null",
+                code="proc_null_terminate",
                 file_name="workload_generator.py",
                 function_name="terminate",
                 message="proc is null cant terminate. maybe StorageWorkloadGenerator.start() is not called.")
 
-            return False
+            # return False
 
-        self.proc.terminate()
+            # self.proc.terminate()
 
-        return True
+            # return True
 
-    def is_terminated(self):
+    def is_alive(self):
 
         if self.proc is None:
             tools.log(
                 app="W_STORAGE_GEN",
                 type="ERROR",
-                code="proc_null",
+                code="proc_null_is_alive",
                 file_name="workload_generator.py",
-                function_name="is_terminated",
+                function_name="is_alive",
                 message="proc is null cant call is_alive(). maybe StorageWorkloadGenerator.start() is not called.")
 
-            return None
+            return False
 
         return self.proc.is_alive()
 
     @staticmethod
     def run_workload_generator(generator_instance):
 
-        while True:
+        # while True:
 
-            start_time = datetime.now()
+        start_time = datetime.now()
 
-            command = CinderWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
+        command = CinderWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
 
-            tools.log(
-                app="W_STORAGE_GEN",
-                message="   {run_f_test} Time: %s \ncommand: %s" %
-                        (str(start_time), command), insert_db=False)
+        tools.log(
+            app="W_STORAGE_GEN",
+            message="   {run_f_test} Time: %s \ncommand: %s" %
+                    (str(start_time), command), insert_db=False)
 
-            try:
-                out, err = tools.run_command(
-                    ["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
-                    debug=False)
+        out = ""
+        err = ""
+        p = None
 
-                if err != "":
-                    tools.log(
-                        app="W_STORAGE_GEN",
-                        type="ERROR",
-                        code="run_fio",
-                        file_name="workload_generator.py",
-                        function_name="run_workload_generator",
-                        message="failed to run fio in storage workload generator. volume: %s" % (generator_instance.volume_id),
-                        exception=err)
+        try:
+            out, err, p = tools.run_command(
+                ["sudo", CinderWorkloadGenerator.fio_bin_path, generator_instance.test_path],
+                debug=False)
 
-                    time.sleep(1)
-
-                    if "file hash not empty on exit" in err:
-
-                        continue
-                    else:
-                        # break
-                        continue
-
-            except Exception as err_ex:
+            if err != "":
                 tools.log(
                     app="W_STORAGE_GEN",
                     type="ERROR",
-                    code="run_fio_cmd",
+                    code="run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="failed to run fio for VOLUME: %s" % (generator_instance.volume_id),
-                    exception=err_ex)
+                    message="failed to run fio in storage workload generator. proc id: %s volume: %s" %
+                            (p.pid, generator_instance.volume_id),
+                    exception=err)
 
-                time.sleep(1)
+                tools.kill_proc(p.pid)
+                # time.sleep(1)
 
-                continue
+                # if "file hash not empty on exit" in err:
+                #
+                #     continue
+                # else:
+                #     # break
+                #     continue
 
-            duration = tools.get_time_difference(start_time)
+        except Exception as err_ex:
+            tools.log(
+                app="W_STORAGE_GEN",
+                type="ERROR",
+                code="run_fio_cmd",
+                file_name="workload_generator.py",
+                function_name="run_workload_generator",
+                message="failed to run fio for VOLUME: %s" % (generator_instance.volume_id),
+                exception=err_ex)
 
-            iops_measured = tools.get_iops_measures_from_fio_output(out)
+            tools.kill_proc(p.pid)
 
-            communication.insert_workload_generator(
-                experiment_id=CinderWorkloadGenerator.experiment["id"],
-                cinder_id=generator_instance.volume_id,
-                nova_id=tools.get_current_tenant_id(),
-                duration=duration,
-                read_iops=iops_measured["read"],
-                write_iops=iops_measured["write"],
-                command=command,
-                output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
+            return
 
-            if generator_instance.show_output == False:
-                out = "SHOW_OUTPUT = False"
+            # time.sleep(1)
 
-            tools.log(app="W_STORAGE_GEN", message=" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                                                   (
-                                                       str(duration), str(iops_measured), generator_instance.volume_id,
-                                                       out,
-                                                       err),
-                      insert_db=False)
+            # continue
 
-            time.sleep(int(np.random.choice(
-                generator_instance.delay_between_workload_generation[0],
-                1,
-                p=generator_instance.delay_between_workload_generation[1]
-            )))
+        duration = tools.get_time_difference(start_time)
+
+        iops_measured = tools.get_iops_measures_from_fio_output(out)
+
+        communication.insert_workload_generator(
+            experiment_id=CinderWorkloadGenerator.experiment["id"],
+            cinder_id=generator_instance.volume_id,
+            nova_id=tools.get_current_tenant_id(),
+            duration=duration,
+            read_iops=iops_measured["read"],
+            write_iops=iops_measured["write"],
+            command=command,
+            output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
+
+        if generator_instance.show_output == False:
+            out = "SHOW_OUTPUT = False"
+
+        tools.log(app="W_STORAGE_GEN", message=" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                                               (
+                                                   str(duration), str(iops_measured), generator_instance.volume_id,
+                                                   out,
+                                                   err),
+                  insert_db=False)
+
+        # time.sleep(int(np.random.choice(
+        #     generator_instance.delay_between_workload_generation[0],
+        #     1,
+        #     p=generator_instance.delay_between_workload_generation[1]
+        # )))
 
 
 class CinderWorkloadGenerator:
     # fio_bin_path = os.path.expanduser("~/fio-2.0.9/fio")
-    fio_bin_path = os.path.expanduser("fio")
-    fio_tests_conf_path = os.path.expanduser("~/MLSchedulerAgent/fio/")
+    fio_bin_path = "fio"
+    fio_tests_conf_path = tools.get_path_expanduser("MLSchedulerAgent/fio/")
     mount_base_path = '/media/'
     experiment = communication.Communication.get_current_experiment()
 
@@ -317,14 +332,16 @@ class CinderWorkloadGenerator:
 
         try:
             result = nova.volumes.create_server_volume(instance_id, volume_id)
-        except:
+        except Exception as err:
             tools.log(
                 app="work_gen",
                 type="WARNING",
                 code="nova_attach_failed",
                 file_name="workload_generator.py",
                 function_name="attach_volume",
-                message="attach failed. id: %s" % volume_id)
+                message="attach failed. id: %s" % volume_id,
+                exception=err
+            )
             return None
 
         return result
@@ -393,7 +410,7 @@ class CinderWorkloadGenerator:
         log = ""
         try:
             c1 = ["sudo", 'mkfs', '-t', "ext3", device]
-            out, err = tools.run_command(c1, debug=True)
+            out, err, p = tools.run_command(c1, debug=True)
             if "in use by the system" in err:
                 tools.log(
                     app="work_gen",
@@ -421,7 +438,7 @@ class CinderWorkloadGenerator:
 
         try:
             c2 = ["sudo", 'mkdir', mount_to_path]
-            out, err = tools.run_command(c2, debug=True)
+            out, err, p = tools.run_command(c2, debug=True)
             if err != "":
                 tools.log(
                     app="work_gen",
@@ -447,7 +464,7 @@ class CinderWorkloadGenerator:
 
         try:
             c3 = ["sudo", 'mount', device, mount_to_path]
-            out, err = tools.run_command(c3, debug=True)
+            out, err, p = tools.run_command(c3, debug=True)
             if err != "":
                 tools.log(
                     app="work_gen",
@@ -778,6 +795,7 @@ class CinderWorkloadGenerator:
                 volumes.append({
                     "id": volume_id,
                     "generator": workload_generator,
+                    "last_test_time": datetime.now(),
                     "create_time": volume_create_time
                 })
 
@@ -829,7 +847,21 @@ class CinderWorkloadGenerator:
 
             self.performance_evaluation_instance.run_fio_test()
 
+            for volume in volumes:
+
+                if tools.get_time_difference(volume["last_test_time"]) >= int(np.random.choice(
+                        self.delay_between_workload_generation[0],
+                        1,
+                        p=self.delay_between_workload_generation[1]
+                )):
+                    volume["generator"].start()
+
+                    time.sleep(random.uniform(0.5, 2.5))
+
             time.sleep(0.5)
+
+        print("\n\n***************************************** died normally")
+
 
 if __name__ == "__main__":
 
@@ -954,3 +986,5 @@ if __name__ == "__main__":
 
     elif "start" in args.commands:
         wg.start_simulation()
+
+    print("\n\n***************************************** died normally222")
