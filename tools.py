@@ -231,7 +231,7 @@ def cinder_wait_for_volume_status(volume_id, status, timeout=0):
         if vol_reload.status == status:
             return True
 
-        time.sleep(0.4)
+        time.sleep(0.2)
 
 
 # todo design a proper error management when calling openstack services using client API ies

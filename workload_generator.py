@@ -21,7 +21,8 @@ class StorageWorkloadGenerator:
 
     """
 
-    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_storage_workload_generation=1.0):
+    def __init__(self, volume_id, workload_type, test_path, show_output=False,
+                 delay_between_storage_workload_generation=1.0):
         """
 
         :param workload_type:
@@ -161,11 +162,13 @@ class StorageWorkloadGenerator:
         if generator_instance.show_output == False:
             out = "SHOW_OUTPUT = False"
 
-        tools.log(app="W_STORAGE_GEN", message=" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                                               (
-                                                   str(duration), str(iops_measured), generator_instance.volume_id,
-                                                   out,
-                                                   err),
+        tools.log(app="W_STORAGE_GEN",
+                  message=" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                          (
+                              str(duration), str(iops_measured), generator_instance.volume_id,
+                              out,
+                              err
+                          ),
                   insert_db=False)
 
         # time.sleep(int(np.random.choice(
@@ -188,6 +191,7 @@ class CinderWorkloadGenerator:
                  current_vm_id,
                  fio_test_name,
                  delay_between_storage_workload_generation,
+                 delay_between_create_volume_generation,
                  max_number_volumes,
                  volume_life_seconds,
                  volume_size,
@@ -208,6 +212,7 @@ class CinderWorkloadGenerator:
         self.wait_after_volume_rejected = wait_after_volume_rejected
         self.request_read_iops = request_read_iops
         self.request_write_iops = request_write_iops
+        self.delay_between_create_volume_generation = delay_between_create_volume_generation
         self.current_vm_id = current_vm_id
         self.fio_test_name = fio_test_name
         self.delay_between_storage_workload_generation = delay_between_storage_workload_generation
@@ -326,7 +331,13 @@ class CinderWorkloadGenerator:
 
             return None
 
-        print("attach_volume instance_id=%s volume_id=%s", instance_id, volume_id)
+        tools.log(
+            app="work_gen",
+            type="INFO",
+            file_name="workload_generator.py",
+            function_name="attach_volume",
+            message="attach_volume instance_id=%s volume_id=%s" % (instance_id, volume_id),
+            insert_db=False)
 
         nova = tools.get_nova_client()
 
@@ -346,66 +357,82 @@ class CinderWorkloadGenerator:
 
         return result
 
-    def mount_volume(self, device_from_openstack_not_used, volume, base_path="/media/"):
+    def mount_volume(self, device_from_openstack, volume, base_path="/media/"):
         '''
 
-        :param device: not used because openstack returns wrong device sometimes. So, nby comparing fdisk -l it finds the latest attached device
+        :param device_from_openstack: pass null if you want to find it using the 'df' and 'fdisk' commands. if buggy, do not use because openstack returns wrong device sometimes. So, nby comparing fdisk -l it finds the latest attached device
         :param volume: it must be an instance of volume object in the cinderclient
         :return:
         '''
 
-        # todo I know there is a case that two volumes get attached at same time, therefore two devices gets ready and it only picks one of them this can cause testing/writing to a wrong volume since device maps the underlying attachment process. Therore must detach and remove the volume.
+        device = device_from_openstack
 
-        already_attached_devices = None
-        try:
-            already_attached_devices = tools.get_attached_devices()
-        except Exception as err:
-            tools.log(
-                app="work_gen",
-                type="ERROR",
-                code="get_attached_devices",
-                file_name="workload_generator.py",
-                function_name="mount_volume",
-                message="failed to get already_attached_devices. must try again but for now return false",
-                exception=err
-            )
-            return False
+        if device is None:
+            # todo I know there is a case that two volumes get attached at same time, therefore two devices gets ready and it only picks one of them this can cause testing/writing to a wrong volume since device maps the underlying attachment process. Therore must detach and remove the volume.
 
-        # todo define a timeout !important
-        # make sure the device is ready to be mounted
-        while True:
+            already_attached_devices = None
             try:
-                new_device = tools.get_attached_devices() - already_attached_devices
+                already_attached_devices = tools.get_attached_devices()
             except Exception as err:
                 tools.log(
                     app="work_gen",
-                    type="WARNING",
+                    type="ERROR",
                     code="get_attached_devices",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
-                    message="failed to get attached devices. will retry in the while true loop.",
+                    message="failed to get already_attached_devices. must try again but for now return false",
                     exception=err
                 )
+                return False
 
-                continue
-
-            if len(new_device) > 0:
-                if len(new_device) > 1:
+            # todo define a timeout !important
+            # make sure the device is ready to be mounted
+            while True:
+                try:
+                    new_device = tools.get_attached_devices() - already_attached_devices
+                except Exception as err:
                     tools.log(
                         app="work_gen",
                         type="WARNING",
-                        code="concurrent_bug",
+                        code="get_attached_devices",
                         file_name="workload_generator.py",
                         function_name="mount_volume",
-                        message="already_attached_devices: %s \nnew_devic: %s \ntwo devices attached at the same time, can not identify which one should be mounted to which volume." % (
-                            already_attached_devices, new_device))
+                        message="failed to get attached devices. will retry in the while true loop.",
+                        exception=err
+                    )
 
-                    return False
+                    continue
 
-                device = new_device.pop()
-                break
+                if len(new_device) > 0:
+                    if len(new_device) > 1:
+                        tools.log(
+                            app="work_gen",
+                            type="WARNING",
+                            code="concurrent_bug",
+                            file_name="workload_generator.py",
+                            function_name="mount_volume",
+                            message="already_attached_devices: %s \nnew_devic: %s \ntwo devices attached at the same time, can not identify which one should be mounted to which volume." % (
+                                already_attached_devices, new_device))
 
-        print("try to mount_volume device: %s volume.id: %", device, volume.id)
+                        return False
+
+                    device = new_device.pop()
+                    break
+        else:
+            # must wait until volume is attached
+
+            tools.cinder_wait_for_volume_status(
+                volume_id=volume.id,
+                status='in-use'
+            )
+
+        tools.log(
+            app="work_gen",
+            type="INFO",
+            file_name="workload_generator.py",
+            function_name="mount_volume",
+            message="try to mount_volume device: %s volume.id: %s" % (device, volume.id),
+            insert_db=False)
 
         log = ""
         try:
@@ -651,7 +678,8 @@ class CinderWorkloadGenerator:
             )
 
             mount_result = self.mount_volume(
-                device_from_openstack_not_used=attach_result.device,
+                # device_from_openstack: pass null if you want to find it using the 'df' and 'fdisk' commands.
+                device_from_openstack=None, #attach_result.device,
                 volume=volume)
 
             if mount_result is False:
@@ -682,7 +710,7 @@ class CinderWorkloadGenerator:
         :return:
         """
 
-        print("detach_delete_all_volumes()")
+        tools.log(message="detach_delete_all_volumes()", insert_db=False)
 
         cinder = tools.get_cinder_client()
 
@@ -779,28 +807,49 @@ class CinderWorkloadGenerator:
 
         volumes = []
 
-        rejection_wait = None
-        hold_issue_volume_request = False
+        last_rejected_create_volume_time = None
+        rejection_hold_create_new_volume_request = False
+
+        last_create_volume_time = None
+        workload_generate_hold_create_new_volume_request = False
 
         # never use continue in this loop, there are multiple independent tasks here
         while True:
-            # hold requesting new volumes
-            if hold_issue_volume_request is True:
-                if tools.get_time_difference(rejection_wait) > int(np.random.choice(
-                        self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1])):
+            # hold requesting new volumes if one is rejected
+            if rejection_hold_create_new_volume_request is True:
+                rejection_hold_create_new_volume_request = False
+                #
+                # gap = int(np.random.choice(self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1]))
+                #
+                # if tools.get_time_difference(last_rejected_create_volume_time) > gap:
+                #     #
+                #     rejection_hold_create_new_volume_request = False
+
+            # apply create volume generation gap
+            if workload_generate_hold_create_new_volume_request is True:
+                #
+                gap = int(np.random.choice(self.delay_between_create_volume_generation[0], 1,
+                                           p=self.delay_between_create_volume_generation[1]))
+
+                if tools.get_time_difference(last_create_volume_time) > gap:
                     #
-                    hold_issue_volume_request = False
+                    workload_generate_hold_create_new_volume_request = False
 
             # volume request section - will start storage ONE TIME workload generator on the created-attached volume
-            if hold_issue_volume_request is False and \
-                            len(volumes) < int(np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
+            if workload_generate_hold_create_new_volume_request is False and \
+                            rejection_hold_create_new_volume_request is False and \
+                            len(volumes) < int(
+                        np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
+
+                last_create_volume_time = datetime.now()
+                workload_generate_hold_create_new_volume_request = True
 
                 volume_id = self.create_attach_volume()
 
                 if volume_id is None:
                     # assume the reason is the volume_request is rejected
-                    rejection_wait = datetime.now()
-                    hold_issue_volume_request = True
+                    last_rejected_create_volume_time = datetime.now()
+                    rejection_hold_create_new_volume_request = True
                 else:
 
                     workload_generator = wg.run_storage_workload_generator(volume_id)
@@ -910,7 +959,11 @@ if __name__ == "__main__":
 
     parser.add_argument('--delay_between_storage_workload_generation', default='[]', metavar='', type=str,
                         required=temp_required,
-                        help='wait before generation - seconds. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
+                        help='wait before storage generation - seconds. example:"[[5], [1.0]]". will be fed to numpy.random.choice')
+
+    parser.add_argument('--delay_between_create_volume_generation', default='[]', metavar='', type=str,
+                        required=temp_required,
+                        help='wait before volume-create requests - seconds. example:"[[5], [1.0]]". will be fed to numpy.random.choice')
 
     parser.add_argument('--max_number_volumes', default='[]', metavar='', type=str, required=temp_required,
                         help='maximum number of volumes to be created. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
@@ -965,6 +1018,7 @@ if __name__ == "__main__":
         request_read_iops=json.loads(args.request_read_iops),
         request_write_iops=json.loads(args.request_write_iops),
         delay_between_storage_workload_generation=json.loads(args.delay_between_storage_workload_generation),
+        delay_between_create_volume_generation=json.loads(args.delay_between_create_volume_generation),
         max_number_volumes=json.loads(args.max_number_volumes),
         volume_life_seconds=json.loads(args.volume_life_seconds),
         volume_size=json.loads(args.volume_size),
