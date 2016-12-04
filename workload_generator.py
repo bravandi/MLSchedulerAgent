@@ -803,7 +803,16 @@ class CinderWorkloadGenerator:
                 self._delete_volume(volume.id)
 
     def start_simulation(self):
-        # self.detach_delete_all_volumes()
+
+        tools.log(
+            app="work_gen",
+            type="INFO",
+            code="start_simulation",
+            file_name="workload_generator.py",
+            function_name="start_simulation",
+            message="tenant_id: %s" % (tools.get_current_tenant_id()))
+
+        self.detach_delete_all_volumes()
 
         volumes = []
 
