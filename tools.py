@@ -11,20 +11,6 @@ from novaclient import client as n_client
 import communication
 import os.path
 
-
-class Configs:
-    def __init__(
-            self,
-            workload_gen_delay_between_workload_generation,
-            workload_gen_fio_test_name,
-            performance_eval_terminate_if_takes,
-            performance_eval_generation_fio_test_name,
-            performance_eval_restart_gap,
-            performance_eval_restart_gap_after_terminate
-    ):
-        pass
-
-
 _current_tenant_id = None
 
 

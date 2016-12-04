@@ -21,18 +21,18 @@ class StorageWorkloadGenerator:
 
     """
 
-    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_workload_generation=1.0):
+    def __init__(self, volume_id, workload_type, test_path, show_output=False, delay_between_storage_workload_generation=1.0):
         """
 
         :param workload_type:
-        :param delay_between_workload_generation:
+        :param delay_between_storage_workload_generation:
         :return:
         """
 
         # threading.Thread.__init__(self)
         self.volume_id = volume_id
         self.workload_type = workload_type
-        self.delay_between_workload_generation = delay_between_workload_generation
+        self.delay_between_storage_workload_generation = delay_between_storage_workload_generation
         self.proc = None
         self.show_output = show_output
         self.test_path = test_path
@@ -169,9 +169,9 @@ class StorageWorkloadGenerator:
                   insert_db=False)
 
         # time.sleep(int(np.random.choice(
-        #     generator_instance.delay_between_workload_generation[0],
+        #     generator_instance.delay_between_storage_workload_generation[0],
         #     1,
-        #     p=generator_instance.delay_between_workload_generation[1]
+        #     p=generator_instance.delay_between_storage_workload_generation[1]
         # )))
 
 
@@ -187,7 +187,7 @@ class CinderWorkloadGenerator:
     def __init__(self,
                  current_vm_id,
                  fio_test_name,
-                 delay_between_workload_generation,
+                 delay_between_storage_workload_generation,
                  max_number_volumes,
                  volume_life_seconds,
                  volume_size,
@@ -201,7 +201,7 @@ class CinderWorkloadGenerator:
         :param workload_id: if equal to 0 it will create new workload by capturing the current experiment requests
         :param current_vm_id:
         :param fio_test_name:
-        :param delay_between_workload_generation:
+        :param delay_between_storage_workload_generation:
         :return:
         """
 
@@ -210,7 +210,7 @@ class CinderWorkloadGenerator:
         self.request_write_iops = request_write_iops
         self.current_vm_id = current_vm_id
         self.fio_test_name = fio_test_name
-        self.delay_between_workload_generation = delay_between_workload_generation
+        self.delay_between_storage_workload_generation = delay_between_storage_workload_generation
         self.workload_id = workload_id
         self.max_number_volumes = max_number_volumes
         self.volume_size = volume_size
@@ -260,7 +260,7 @@ class CinderWorkloadGenerator:
         generator = StorageWorkloadGenerator(
             volume_id=volume_id,
             workload_type="",
-            delay_between_workload_generation=self.delay_between_workload_generation,
+            delay_between_storage_workload_generation=self.delay_between_storage_workload_generation,
             show_output=False,
             test_path=test_path)
 
@@ -319,10 +319,10 @@ class CinderWorkloadGenerator:
             tools.log(
                 app="work_gen",
                 type="WARNING",
-                code="vol_status_error",
+                code="rejected|vol_status_error",
                 file_name="workload_generator.py",
                 function_name="attach_volume",
-                message="VOLUME DELETED because status is 'error' id: %s" % volume_id)
+                message="Reason: Assume volume is rejected. Cannot distinguish rejection or another reason for having error status. VOLUME DELETED because status is 'error' id: %s" % volume_id)
 
             return None
 
@@ -779,26 +779,42 @@ class CinderWorkloadGenerator:
 
         volumes = []
 
-        while True:
+        rejection_wait = None
+        hold_issue_volume_request = False
 
-            if len(volumes) < int(np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
+        # never use continue in this loop, there are multiple independent tasks here
+        while True:
+            # hold requesting new volumes
+            if hold_issue_volume_request is True:
+                if tools.get_time_difference(rejection_wait) > int(np.random.choice(
+                        self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1])):
+                    #
+                    hold_issue_volume_request = False
+
+            # volume request section - will start storage ONE TIME workload generator on the created-attached volume
+            if hold_issue_volume_request is False and \
+                            len(volumes) < int(np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
 
                 volume_id = self.create_attach_volume()
 
                 if volume_id is None:
-                    continue
+                    # assume the reason is the volume_request is rejected
+                    rejection_wait = datetime.now()
+                    hold_issue_volume_request = True
+                else:
 
-                workload_generator = wg.run_storage_workload_generator(volume_id)
+                    workload_generator = wg.run_storage_workload_generator(volume_id)
 
-                volume_create_time = datetime.now()
+                    volume_create_time = datetime.now()
 
-                volumes.append({
-                    "id": volume_id,
-                    "generator": workload_generator,
-                    "last_test_time": datetime.now(),
-                    "create_time": volume_create_time
-                })
+                    volumes.append({
+                        "id": volume_id,
+                        "generator": workload_generator,
+                        "last_test_time": datetime.now(),
+                        "create_time": volume_create_time
+                    })
 
+            # remove expired volumes
             for volume in volumes[:]:
 
                 if tools.get_time_difference(volume["create_time"]) > \
@@ -847,16 +863,15 @@ class CinderWorkloadGenerator:
 
             self.performance_evaluation_instance.run_fio_test()
 
+            # based on each volume creation time start storage workload generator for them
             for volume in volumes:
 
                 if tools.get_time_difference(volume["last_test_time"]) >= int(np.random.choice(
-                        self.delay_between_workload_generation[0],
+                        self.delay_between_storage_workload_generation[0],
                         1,
-                        p=self.delay_between_workload_generation[1]
+                        p=self.delay_between_storage_workload_generation[1]
                 )):
                     volume["generator"].start()
-
-                    time.sleep(random.uniform(0.5, 2.5))
 
             time.sleep(0.5)
 
@@ -893,7 +908,7 @@ if __name__ == "__main__":
     parser.add_argument('--request_write_iops', default='[]', metavar='', type=str, required=temp_required,
                         help='example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
-    parser.add_argument('--delay_between_workload_generation', default='[]', metavar='', type=str,
+    parser.add_argument('--delay_between_storage_workload_generation', default='[]', metavar='', type=str,
                         required=temp_required,
                         help='wait before generation - seconds. example:[[500, 750, 1000], [0.5, 0.3, 0.2]]. will be fed to numpy.random.choice')
 
@@ -949,7 +964,7 @@ if __name__ == "__main__":
         wait_after_volume_rejected=json.loads(args.wait_after_volume_rejected),
         request_read_iops=json.loads(args.request_read_iops),
         request_write_iops=json.loads(args.request_write_iops),
-        delay_between_workload_generation=json.loads(args.delay_between_workload_generation),
+        delay_between_storage_workload_generation=json.loads(args.delay_between_storage_workload_generation),
         max_number_volumes=json.loads(args.max_number_volumes),
         volume_life_seconds=json.loads(args.volume_life_seconds),
         volume_size=json.loads(args.volume_size),

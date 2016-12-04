@@ -2,7 +2,7 @@ import argparse
 import tools
 from datetime import datetime
 import communication
-import time
+import random
 import os
 from multiprocessing import Process, Array, Value
 import pdb
@@ -260,6 +260,7 @@ class PerformanceEvaluation:
             if difference > self.terminate_if_takes:
                 f_test.terminate(self.terminate_if_takes)
 
+                # record termination in database
                 communication.insert_volume_performance_meter(
                     experiment_id=PerformanceEvaluation.experiment["id"],
                     nova_id=tools.get_current_tenant_id(),
@@ -280,7 +281,8 @@ class PerformanceEvaluation:
             #               str(tools.get_time_difference(last_end_time)))
 
             # have xx seconds gap between restarting the tests
-            if last_end_time is not None and tools.get_time_difference(last_end_time) < self.restart_gap:
+            if last_end_time is not None and \
+                tools.get_time_difference(last_end_time) < self.restart_gap + random.uniform(0.5, 2.5):
                 return
 
             # if terminated wait for xx seconds then start the process

@@ -22,6 +22,10 @@ function c_catOut(){
 	sudo find /home/centos -type f -name '*.out' -exec cat {} +
 }
 
+function c_chmod(){
+    sudo chmod -R 777 ~/MLSchedulerAgent
+}
+
 function c_delErrOutFiles(){
 	 sudo rm /home/centos/*.err
 	 sudo rm /home/centos/*.out
