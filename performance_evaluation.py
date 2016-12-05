@@ -287,7 +287,7 @@ class PerformanceEvaluation:
 
             # have xx seconds gap between restarting the tests
             if last_end_time is not None and \
-                            tools.get_time_difference(last_end_time) < self.restart_gap + random.uniform(0.5, 2.5):
+                            tools.get_time_difference(last_end_time) < self.restart_gap:# + random.uniform(0.5, 2.5):
                 return
 
             # if terminated wait for xx seconds then start the process
