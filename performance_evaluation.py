@@ -144,7 +144,7 @@ class PerformanceEvaluationFIOTest:
             if err != "":
                 tools.log(
                     app="perf_eval",
-                    type="WARNING",
+                    type="ERROR",
                     volume_cinder_id=test_instance.cinder_volume_id,
                     code="perf_run_fio",
                     file_name="workload_generator.py",

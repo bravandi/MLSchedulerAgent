@@ -107,7 +107,7 @@ class StorageWorkloadGenerator:
             if err != "":
                 tools.log(
                     app="W_STORAGE_GEN",
-                    type="WARNING",
+                    type="ERROR",
                     code="run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
