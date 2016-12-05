@@ -187,6 +187,16 @@ class PerformanceEvaluationFIOTest:
             duration=float(duration),
             io_test_output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
 
+        tools.log(
+            app="perf_eval",
+            type="INFO",
+            volume_cinder_id=test_instance.cinder_volume_id,
+            code="perf_iops_m",
+            file_name="workload_generator.py",
+            function_name="run_workload_generator",
+            message="read: %s write: %s" % (iops_measured["read"], iops_measured["write"])
+        )
+
         # todo have switch for either saving test results or not
         # if False:
         #     out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S"), 'w')

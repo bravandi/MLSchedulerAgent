@@ -158,6 +158,16 @@ class StorageWorkloadGenerator:
             command=command,
             output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
 
+        tools.log(
+            app="W_STORAGE_GEN",
+            type="INFO",
+            code="run_fio_cmd",
+            file_name="workload_generator.py",
+            function_name="run_workload_generator",
+            message="read: %s write: %s" % (iops_measured["read"], iops_measured["write"]),
+            volume_cinder_id=generator_instance.volume_id
+        )
+
         if generator_instance.show_output == False:
             out = "SHOW_OUTPUT = False"
 
