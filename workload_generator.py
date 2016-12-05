@@ -161,7 +161,7 @@ class StorageWorkloadGenerator:
         tools.log(
             app="W_STORAGE_GEN",
             type="INFO",
-            code="run_fio_cmd",
+            code="wgen_iops_m",
             file_name="workload_generator.py",
             function_name="run_workload_generator",
             message="read: %s write: %s" % (iops_measured["read"], iops_measured["write"]),
