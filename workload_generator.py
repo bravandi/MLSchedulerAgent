@@ -957,7 +957,7 @@ class CinderWorkloadGenerator:
                 )):
                     volume["generator"].start()
 
-            time.sleep(0.5)
+            time.sleep(1)
 
         print("\n\n***************************************** died normally")
 
