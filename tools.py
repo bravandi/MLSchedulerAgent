@@ -431,6 +431,7 @@ def get_attached_devices(match="vd", debug=False):
 
 
 def log(message,
+        volume_cinder_id='',
         type='',
         app='agent',
         code='',
@@ -444,8 +445,15 @@ def log(message,
     if exception != '':
         exception_2 = "\n   ERR: " + str(exception)
 
-    msg = "\n{%s} %s-%s [%s - %s] %s. [%s] %s\n" \
-          % (app, type, code, function_name, file_name, message, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    volume_cinder_id2 = ''
+    if volume_cinder_id != '' and volume_cinder_id is not None:
+        volume_cinder_id2 = " <volume:  " + volume_cinder_id + ">"
+
+    msg = "\n{%s} %s-%s [%s - %s] %s. %s [%s] %s\n" \
+          % (app, type, code, function_name, file_name,
+             message,
+             volume_cinder_id2,
+             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
              str(exception_2))
 
     print(msg)
@@ -455,6 +463,7 @@ def log(message,
 
     communication.insert_log(
         experiment_id=experiment_id,
+        volume_cinder_id=volume_cinder_id,
         app=app,
         type=type,
         code=code,

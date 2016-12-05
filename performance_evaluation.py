@@ -49,7 +49,6 @@ class PerformanceEvaluationFIOTest:
 
     def start(self):
         if self.is_alive() is True:
-
             return False
 
         self.last_start_time = Array('c', str(datetime.now()))
@@ -65,7 +64,7 @@ class PerformanceEvaluationFIOTest:
                   self.last_terminate_time,
                   self.kill,))
 
-        # tools.log("   Start test for volume: %s Time: %s" %
+        # tools.sou "   Start test for volume: %s Time: %s" %
         #           (self.cinder_volume_id, self.last_start_time))
         self.proc.start()
 
@@ -80,20 +79,22 @@ class PerformanceEvaluationFIOTest:
             tools.log(
                 app="perf_eval",
                 type="INFO",
+                volume_cinder_id=self.cinder_volume_id,
                 code="terminate_from_work_gen",
                 file_name="performance_evaluation.py",
                 function_name="terminate",
-                message="Workload generator called terminate VOLUME: %s Time: %s" %
-                        (self.cinder_volume_id, self.last_terminate_time.value))
+                message="Workload generator called terminate Time: %s" % self.last_terminate_time.value
+            )
         else:
             tools.log(
                 app="perf_eval",
                 type="INFO",
+                volume_cinder_id=self.cinder_volume_id,
                 code="terminate",
                 file_name="performance_evaluation.py",
                 function_name="terminate",
-                message="TERMINATE After %s seconds VOLUME: %s Time: %s" %
-                        (str(after_seconds), self.cinder_volume_id, self.last_terminate_time.value))
+                message="TERMINATE After %s seconds Time: %s" %
+                        (str(after_seconds), self.last_terminate_time.value))
 
         self.kill = Value('i', 1)
 
@@ -131,7 +132,7 @@ class PerformanceEvaluationFIOTest:
             insert_db=False)
 
         out = ""
-        err =""
+        err = ""
         p = None
 
         try:
@@ -140,20 +141,20 @@ class PerformanceEvaluationFIOTest:
 
             if err != "":
                 tools.log(
-                    app="W_STORAGE_GEN",
+                    app="perf_eval",
                     type="ERROR",
                     code="run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="failed to run fio in storage workload generator. volume: %s" % (
-                        test_instance.cinder_volume_id),
+                    message="failed to run fio in storage workload generator. PID: %s VOLUME: %s" %
+                            (str(p.pid), test_instance.cinder_volume_id),
                     exception=err)
 
                 tools.kill_proc(p.pid)
 
         except Exception as err_ex:
             tools.log(
-                app="W_STORAGE_GEN",
+                app="perf_eval",
                 type="ERROR",
                 code="run_fio_cmd",
                 file_name="workload_generator.py",
@@ -194,12 +195,12 @@ class PerformanceEvaluationFIOTest:
         tools.log(
             app="perf_eval",
             type="info",
+            volume_cinder_id=test_instance.cinder_volume_id,
             code="perf_fio_done",
             file_name="performance_evaluation.py",
             function_name="run_f_test",
-            message=" DURATION: %s IOPS: %s VOLUME: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" % (
-                str(duration), str(iops_measured), test_instance.cinder_volume_id, out, err
-            ),
+            message=" DURATION: %s IOPS: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                    (str(duration), str(iops_measured), out, err),
             insert_db=False)
 
 
@@ -282,7 +283,7 @@ class PerformanceEvaluation:
 
             # have xx seconds gap between restarting the tests
             if last_end_time is not None and \
-                tools.get_time_difference(last_end_time) < self.restart_gap + random.uniform(0.5, 2.5):
+                            tools.get_time_difference(last_end_time) < self.restart_gap + random.uniform(0.5, 2.5):
                 return
 
             # if terminated wait for xx seconds then start the process
@@ -319,6 +320,7 @@ class PerformanceEvaluation:
                 tools.log(
                     app="perf_eval",
                     type="ERROR",
+                    volume_cinder_id=cinder_volume_id,
                     code="concurrent_bug",
                     file_name="workload_generator.py",
                     function_name="run_storage_workload_generator",

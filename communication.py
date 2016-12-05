@@ -145,6 +145,7 @@ def insert_volume_performance_meter(
 
 def insert_log(
         experiment_id=0,
+        volume_cinder_id='',
         app=None,
         type=None,
         code=None,
@@ -158,6 +159,7 @@ def insert_log(
 
     data = {
         "experiment_id": experiment_id,
+        "volume_cinder_id": volume_cinder_id,
         "app": app,
         "type": type,
         "code": code,
