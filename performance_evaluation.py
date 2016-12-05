@@ -111,6 +111,7 @@ class PerformanceEvaluationFIOTest:
             tools.log(
                 app="perf_eval",
                 type="DEBUG",
+                volume_cinder_id=test_instance.cinder_volume_id,
                 code="DEBUG_check_kill",
                 file_name="performance_evaluation.py",
                 function_name="run_f_test",
@@ -121,7 +122,8 @@ class PerformanceEvaluationFIOTest:
 
         tools.log(
             app="perf_eval",
-            type="info",
+            type="INFO",
+            volume_cinder_id=test_instance.cinder_volume_id,
             code="start_perf_fio",
             file_name="performance_evaluation.py",
             function_name="run_f_test",
@@ -142,13 +144,14 @@ class PerformanceEvaluationFIOTest:
             if err != "":
                 tools.log(
                     app="perf_eval",
-                    type="ERROR",
-                    code="run_fio",
+                    type="WARNING",
+                    volume_cinder_id=test_instance.cinder_volume_id,
+                    code="perf_run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="failed to run fio in storage workload generator. PID: %s VOLUME: %s" %
-                            (str(p.pid), test_instance.cinder_volume_id),
-                    exception=err)
+                    message="fio stderr not empty. out: %s. PID: %s VOLUME: %s" % (out, str(p.pid)),
+                    exception=err
+                )
 
                 tools.kill_proc(p.pid)
 
@@ -156,12 +159,13 @@ class PerformanceEvaluationFIOTest:
             tools.log(
                 app="perf_eval",
                 type="ERROR",
+                volume_cinder_id=test_instance.cinder_volume_id,
                 code="run_fio_cmd",
                 file_name="workload_generator.py",
                 function_name="run_workload_generator",
-                message="failed to run fio for perf test. PID: %s VOLUME: %s" %
-                        (str(p.pid), test_instance.cinder_volume_id),
-                exception=err_ex)
+                message="failed to run fio for perf test. PID: %s" % str(p.pid),
+                exception=err_ex
+            )
 
             tools.kill_proc(p.pid)
 
@@ -194,7 +198,7 @@ class PerformanceEvaluationFIOTest:
 
         tools.log(
             app="perf_eval",
-            type="info",
+            type="INFO",
             volume_cinder_id=test_instance.cinder_volume_id,
             code="perf_fio_done",
             file_name="performance_evaluation.py",

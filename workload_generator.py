@@ -107,11 +107,11 @@ class StorageWorkloadGenerator:
             if err != "":
                 tools.log(
                     app="W_STORAGE_GEN",
-                    type="ERROR",
+                    type="WARNING",
                     code="run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="failed to run fio in storage workload generator. proc id: %s" % p.pid,
+                    message="fio stderr not empty. stdout: %s. proc id: %s" % (out, p.pid),
                     volume_cinder_id=generator_instance.volume_id,
                     exception=err)
 
@@ -482,11 +482,12 @@ class CinderWorkloadGenerator:
                 tools.log(
                     app="work_gen",
                     volume_cinder_id=volume.id,
-                    type="ERROR",
+                    type="WARNING",
                     code="mount_mkdir",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
-                    message="%s out-->%s err-->%s  \n" % (c2, out, err)
+                    message="mkdir stderr not empty. %s out-->%s \n" % (c2, out),
+                    exception=err
                 )
                 return False
             log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
@@ -509,12 +510,13 @@ class CinderWorkloadGenerator:
             if err != "":
                 tools.log(
                     app="work_gen",
-                    type="ERROR",
+                    type="WARNING",
                     volume_cinder_id=volume.id,
                     code="mount_mount",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
-                    message="%s out-->%s err-->%s  \n" % (c3, out, err)
+                    message="mount std err not empty. %s out-->%s \n" % (c3, out),
+                    exception=err
                 )
                 return False
             log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
