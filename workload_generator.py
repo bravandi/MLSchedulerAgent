@@ -301,7 +301,21 @@ class CinderWorkloadGenerator:
 
         cinder = tools.get_cinder_client()
 
-        volume = cinder.volumes.create(size, name="%s,%s" % (CinderWorkloadGenerator.experiment["id"], str(id)))
+        try:
+            volume = cinder.volumes.create(size, name="%s,%s" % (CinderWorkloadGenerator.experiment["id"], str(id)))
+        except Exception as err:
+            communication.log(
+                app="agent",
+                type="ERROR",
+                code="create_vol_failed",
+                file_name="workload_generator.py",
+                function_name="create_volume",
+                message="failed to get create volume",
+                exception=err
+            )
+
+            time.sleep(1)
+            return None
 
         # todo must call from scheduler it self
         # communication.add_volume(
@@ -659,7 +673,7 @@ class CinderWorkloadGenerator:
                 app="work_gen",
                 type="WARNING",
                 volume_cinder_id=volume_id,
-                code="del_vol_not_exists",
+                code="del_vol_not_exists_detach_vol",
                 file_name="workload_generator.py",
                 function_name="_detach_volume",
                 message="attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists",
@@ -687,6 +701,9 @@ class CinderWorkloadGenerator:
     def create_attach_volume(self):
 
         volume = self.create_volume()
+
+        if volume is None:
+            return None
 
         attach_result = self.attach_volume(wg.current_vm_id, volume.id)
 
@@ -782,6 +799,8 @@ class CinderWorkloadGenerator:
                         function_name="detach_delete_all_volumes",
                         message="attempt to delete a volume that does not exists. Probably [nova volume-attachment] returned a volume that does not exists.",
                         exception=err)
+
+                    # if "could not be found" in str(err)
 
                     volumes.remove(volume)
                     continue
