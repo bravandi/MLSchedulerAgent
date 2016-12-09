@@ -304,7 +304,7 @@ class CinderWorkloadGenerator:
         try:
             volume = cinder.volumes.create(size, name="%s,%s" % (CinderWorkloadGenerator.experiment["id"], str(id)))
         except Exception as err:
-            communication.log(
+            tools.log(
                 app="agent",
                 type="ERROR",
                 code="create_vol_failed",
