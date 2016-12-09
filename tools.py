@@ -221,17 +221,32 @@ def cinder_wait_for_volume_status(volume_id, status, timeout=0):
 
     cinder = get_cinder_client()
 
+
     while True:
+        try:
 
-        vol_reload = cinder.volumes.get(volume_id)
+            vol_reload = cinder.volumes.get(volume_id)
 
-        if vol_reload.status == "error":
-            return False
+            if vol_reload.status == "error":
+                return False
 
-        if vol_reload.status == status:
-            return True
+            if vol_reload.status == status:
+                return True
 
-        time.sleep(0.1)
+            time.sleep(0.2)
+        except Exception as err:
+            log(
+                app="agent",
+                type="ERROR",
+                volume_cinder_id=volume_id,
+                code="get_vol_status_failed",
+                file_name="tools.py",
+                function_name="cinder_wait_for_volume_status",
+                message="failed to get volume status",
+                exception=err
+            )
+
+            time.sleep(1)
 
 
 # todo design a proper error management when calling openstack services using client API ies
