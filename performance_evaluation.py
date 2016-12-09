@@ -34,7 +34,6 @@ class PerformanceEvaluationFIOTest:
         self.last_start_time = tmp
         self.last_end_time = tmp
         self.last_terminate_time = tmp
-        self.kill = False
         self.proc = None
         self.show_output = show_output
 
@@ -54,15 +53,13 @@ class PerformanceEvaluationFIOTest:
         self.last_start_time = Array('c', str(datetime.now()))
         self.last_end_time = Array('c', " " * 26)
         self.last_terminate_time = Array('c', " " * 26)
-        self.kill = Value('i', 0)
 
         self.proc = Process(
             target=PerformanceEvaluationFIOTest.run_f_test,
             args=(self,
                   self.last_start_time,
                   self.last_end_time,
-                  self.last_terminate_time,
-                  self.kill,))
+                  self.last_terminate_time,))
 
         # tools.sou "   Start test for volume: %s Time: %s" %
         #           (self.cinder_volume_id, self.last_start_time))
@@ -83,7 +80,7 @@ class PerformanceEvaluationFIOTest:
                 code="terminate_from_work_gen",
                 file_name="performance_evaluation.py",
                 function_name="terminate",
-                message="Workload generator called terminate Time: %s" % self.last_terminate_time.value
+                message="Workload generator called terminate"
             )
         else:
             tools.log(
@@ -96,8 +93,6 @@ class PerformanceEvaluationFIOTest:
                 message="TERMINATE After %s seconds Time: %s" %
                         (str(after_seconds), self.last_terminate_time.value))
 
-        self.kill = Value('i', 1)
-
     def is_alive(self):
         if self.proc == None:
             return False
@@ -105,20 +100,7 @@ class PerformanceEvaluationFIOTest:
         return self.proc.is_alive()
 
     @staticmethod
-    def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time, kill):
-
-        if kill == 1:
-            tools.log(
-                app="perf_eval",
-                type="DEBUG",
-                volume_cinder_id=test_instance.cinder_volume_id,
-                code="DEBUG_check_kill",
-                file_name="performance_evaluation.py",
-                function_name="run_f_test",
-                message="kill variable value is changed"
-            )
-
-            return
+    def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time):
 
         tools.log(
             app="perf_eval",
