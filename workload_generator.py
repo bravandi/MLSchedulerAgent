@@ -51,14 +51,15 @@ class StorageWorkloadGenerator:
         return True
 
     def terminate(self):
-        if self.proc is None:
-            tools.log(
-                app="W_STORAGE_GEN",
-                type="ERROR",
-                code="proc_null_terminate",
-                file_name="workload_generator.py",
-                function_name="terminate",
-                message="proc is null cant terminate. maybe StorageWorkloadGenerator.start() is not called.")
+        pass
+        # if self.proc is None:
+        #     tools.log(
+        #         app="W_STORAGE_GEN",
+        #         type="ERROR",
+        #         code="proc_null_terminate",
+        #         file_name="workload_generator.py",
+        #         function_name="terminate",
+        #         message="proc is null cant terminate. maybe StorageWorkloadGenerator.start() is not called.")
 
             # return False
 
@@ -69,13 +70,6 @@ class StorageWorkloadGenerator:
     def is_alive(self):
 
         if self.proc is None:
-            tools.log(
-                app="W_STORAGE_GEN",
-                type="ERROR",
-                code="proc_null_is_alive",
-                file_name="workload_generator.py",
-                function_name="is_alive",
-                message="proc is null cant call is_alive(). maybe StorageWorkloadGenerator.start() is not called.")
 
             return False
 
@@ -246,7 +240,7 @@ class CinderWorkloadGenerator:
         # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
 
         try:
-            if True or os.path.isfile(test_path) == False:
+            if os.path.isfile(test_path) == False:
 
                 with open(CinderWorkloadGenerator.fio_tests_conf_path + self.fio_test_name, 'r') as myfile:
                     data = myfile.read().split('\n')
