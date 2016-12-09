@@ -450,7 +450,11 @@ def log(message,
         volume_cinder_id2 = " <volume:  " + volume_cinder_id + ">"
 
     msg = "\n{%s} %s-%s [%s - %s] %s. %s [%s] %s\n" \
-          % (app, type, code, function_name, file_name,
+          % (app,
+             type,
+             code,
+             function_name,
+             file_name,
              message,
              volume_cinder_id2,
              datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

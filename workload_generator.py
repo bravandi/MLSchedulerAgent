@@ -111,7 +111,7 @@ class StorageWorkloadGenerator:
                     code="run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="fio stderr not empty. stdout: %s. proc id: %s" % (out, p.pid),
+                    message="fio stderr not empty. stdout: " + out,
                     volume_cinder_id=generator_instance.volume_id,
                     exception=err)
 

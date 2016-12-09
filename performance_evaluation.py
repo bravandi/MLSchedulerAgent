@@ -149,13 +149,14 @@ class PerformanceEvaluationFIOTest:
                     code="perf_run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="fio stderr not empty. out: %s. PID: %s VOLUME: %s" % (out, str(p.pid)),
+                    message="fio stderr not empty. out: " + out,
                     exception=err
                 )
 
                 tools.kill_proc(p.pid)
 
         except Exception as err_ex:
+
             tools.log(
                 app="perf_eval",
                 type="ERROR",
@@ -163,7 +164,7 @@ class PerformanceEvaluationFIOTest:
                 code="run_fio_cmd",
                 file_name="workload_generator.py",
                 function_name="run_workload_generator",
-                message="failed to run fio for perf test. PID: %s" % str(p.pid),
+                message="failed to run fio for perf test",
                 exception=err_ex
             )
 
