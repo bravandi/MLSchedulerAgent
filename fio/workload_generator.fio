@@ -1,14 +1,18 @@
 [global]
 #directory=
-randrepeat=1
+
+##randrepeat=1
+
 ioengine=libaio
-direct=1
-gtod_reduce=1
+
+##direct=1
+##gtod_reduce=1
+
 #name=test
 #filename=test_filename2
 bs=4k
 #iodepth=64
-iodepth=1
+#iodepth=1
 size=64m
 #size=128m
 

@@ -1,10 +1,8 @@
-import argparse
 import tools
 from datetime import datetime
 import communication
-import random
 import os
-from multiprocessing import Process, Array, Value
+from multiprocessing import Process, Array
 import pdb
 
 
@@ -68,7 +66,7 @@ class PerformanceEvaluationFIOTest:
         return True
         # print("ZZZZZZZZZZZZZZZZZ" + self.last_end_time.value)
 
-    def terminate(self, after_seconds=-1):
+    def terminate_ftest(self, after_seconds=-1):
         self.last_end_time = Array('c', " " * 26)
         self.last_terminate_time = Array('c', str(datetime.now()))
 
@@ -94,7 +92,7 @@ class PerformanceEvaluationFIOTest:
                         (str(after_seconds), self.last_terminate_time.value))
 
     def is_alive(self):
-        if self.proc == None:
+        if self.proc is None:
             return False
 
         return self.proc.is_alive()
@@ -102,24 +100,26 @@ class PerformanceEvaluationFIOTest:
     @staticmethod
     def run_f_test(test_instance, last_start_time, last_end_time, last_terminate_time):
 
-        tools.log(
-            app="perf_eval",
-            type="INFO",
-            volume_cinder_id=test_instance.cinder_volume_id,
-            code="start_perf_fio",
-            file_name="performance_evaluation.py",
-            function_name="run_f_test",
-            message="Time: %s Command: %s" % (
-                str(test_instance.last_start_time.value),
-                PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path
-            ),
-            insert_db=False)
+        # tools.log(
+        #     app="perf_eval",
+        #     type="INFO",
+        #     volume_cinder_id=test_instance.cinder_volume_id,
+        #     code="start_perf_fio",
+        #     file_name="performance_evaluation.py",
+        #     function_name="run_f_test",
+        #     message="Time: %s Command: %s" % (
+        #         str(test_instance.last_start_time.value),
+        #         PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path
+        #     ),
+        #     insert_db=False)
 
         out = ""
         err = ""
         p = None
+        command = ""
 
         try:
+            command = "sudo " + PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path
             out, err, p = tools.run_command(
                 ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
 
@@ -128,14 +128,17 @@ class PerformanceEvaluationFIOTest:
                     app="perf_eval",
                     type="ERROR",
                     volume_cinder_id=test_instance.cinder_volume_id,
-                    code="perf_run_fio",
+                    code="perf_fio_std_err",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="fio stderr not empty. out: " + out,
+                    message="command: %s | stdout: %s" %
+                            (command, out),
                     exception=err
                 )
 
                 tools.kill_proc(p.pid)
+
+                return
 
         except Exception as err_ex:
 
@@ -143,10 +146,10 @@ class PerformanceEvaluationFIOTest:
                 app="perf_eval",
                 type="ERROR",
                 volume_cinder_id=test_instance.cinder_volume_id,
-                code="run_fio_cmd",
+                code="run_perf_fio_failed",
                 file_name="workload_generator.py",
                 function_name="run_workload_generator",
-                message="failed to run fio for perf test",
+                message="failed to run fio for perf test. command: " + command,
                 exception=err_ex
             )
 
@@ -170,23 +173,7 @@ class PerformanceEvaluationFIOTest:
             duration=float(duration),
             io_test_output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
 
-        tools.log(
-            app="perf_eval",
-            type="INFO",
-            volume_cinder_id=test_instance.cinder_volume_id,
-            code="perf_iops_m",
-            file_name="workload_generator.py",
-            function_name="run_workload_generator",
-            message="read: %s write: %s" % (iops_measured["read"], iops_measured["write"])
-        )
-
-        # todo have switch for either saving test results or not
-        # if False:
-        #     out_file = open(test_instance.volume_path + end_time.strftime("%m-%d-%Y_%H-%M-%S"), 'w')
-        #     out_file.write(out)
-        #     out_file.close()
-
-        if test_instance.show_output == False:
+        if test_instance.show_output is False:
             out = "SHOW_OUTPUT = False"
 
         tools.log(
@@ -196,9 +183,10 @@ class PerformanceEvaluationFIOTest:
             code="perf_fio_done",
             file_name="performance_evaluation.py",
             function_name="run_f_test",
-            message=" DURATION: %s IOPS: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
-                    (str(duration), str(iops_measured), out, err),
-            insert_db=False)
+            message="DURATION: %s read: %s write: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
+                    (str(duration), iops_measured["read"], iops_measured["write"], out, err)
+            # ,insert_db=False
+        )
 
 
 class PerformanceEvaluation:
@@ -232,9 +220,16 @@ class PerformanceEvaluation:
     def terminate_fio_test(self, cinder_id):
 
         if PerformanceEvaluation.f_test_instances.has_key(cinder_id):
-            PerformanceEvaluation.f_test_instances[cinder_id].terminate()
+            PerformanceEvaluation.f_test_instances[cinder_id].terminate_ftest()
 
     def fio_test(self, cinder_volume_id, test_name):
+        """
+
+        :param cinder_volume_id:
+        :param test_name:
+        :return: 'test-is-in-progress', 'on-hold-restart-gap', 'on-hold-terminated-gap',
+        'volume-path-not-exists-try-again-next-round', 'successful', 'failed-copy-perf-eval-fio-test-file'
+        """
 
         # outside if the if statement, in case the test is changed
         volume_path = "%s%s/" % (PerformanceEvaluation.mount_base_path, cinder_volume_id)
@@ -256,7 +251,7 @@ class PerformanceEvaluation:
             # tools.log(" [terminate] because taking more than %s seconds" % difference)
 
             if difference > self.terminate_if_takes:
-                f_test.terminate(self.terminate_if_takes)
+                f_test.terminate_ftest(self.terminate_if_takes)
 
                 # record termination in database
                 communication.insert_volume_performance_meter(
@@ -269,6 +264,7 @@ class PerformanceEvaluation:
                     terminate_wait=float(difference),
                     io_test_output="TERMINATED [terminate_if_takes: %s]" % str(self.terminate_if_takes))
 
+            return "test-is-in-progress"
         else:
 
             last_end_time = f_test.get_last_end_time()
@@ -280,22 +276,22 @@ class PerformanceEvaluation:
 
             # have xx seconds gap between restarting the tests
             if last_end_time is not None and \
-                            tools.get_time_difference(last_end_time) < self.restart_gap:# + random.uniform(0.5, 2.5):
-                return
+                            tools.get_time_difference(last_end_time) < self.restart_gap:  # + random.uniform(0.5, 2.5):
+                return 'on-hold-restart-gap'
 
             # if terminated wait for xx seconds then start the process
             if last_terminate_time is not None and tools.get_time_difference(
                     last_terminate_time) < self.restart_gap_after_terminate:
-                return
+                return 'on-hold-terminated-gap'
 
             # if volume is attached but not mounted yet, or the volume is detached
-            if os.path.isdir(volume_path) == False:
+            if os.path.isdir(volume_path) is False:
                 PerformanceEvaluation.f_test_instances.pop(cinder_volume_id)
-                return
+                return 'volume-path-not-exists-try-again-next-round'
 
             try:
                 # make sure the test file [*.fio] exists
-                if True or os.path.isfile(test_path) == False:
+                if os.path.isfile(test_path) is False:
 
                     with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
                         data = myfile.read().split('\n')
@@ -312,8 +308,9 @@ class PerformanceEvaluation:
 
                 f_test.start()
 
+                return 'successful'
+
             except Exception as err:
-                # todo !important make sure the consistency of cached volume ides
                 tools.log(
                     app="perf_eval",
                     type="ERROR",
@@ -323,15 +320,24 @@ class PerformanceEvaluation:
                     function_name="run_storage_workload_generator",
                     message="could not create the fio test file for workload generator",
                     exception=err)
-                return
 
-    def run_fio_test(self):
+                return 'failed-copy-perf-eval-fio-test-file'
+
+    def run_fio_test_old(self):
 
         attached_volumes = tools.get_all_attached_volumes(self.current_vm_id)
+
+        if attached_volumes is None:
+            return None
 
         for volume in attached_volumes:
             self.fio_test(cinder_volume_id=volume.id,
                           test_name=self.fio_test_name)
+
+    def run_fio_test(self, volume_id):
+
+        return self.fio_test(cinder_volume_id=volume_id,
+                             test_name=self.fio_test_name)
 
     def report_available_iops(self):
 

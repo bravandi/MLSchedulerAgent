@@ -31,6 +31,10 @@ function c_delErrOutFiles(){
 	 sudo rm /home/centos/*.out
 }
 
+function c_delMedia(){
+	 sudo rm -r -d /media/*
+}
+
 function c_killPerformanceEvaluation(){
 	sudo ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 }
@@ -126,5 +130,7 @@ function c_debugClient(){
 	#cp_run "$cv_cmd" $1
 
 }
+
+sudo timedatectl set-timezone America/New_York
 #cd /root/cinder/
 htop

@@ -1,7 +1,5 @@
-# babak
 import subprocess
 import time
-from datetime import datetime
 import pdb
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -145,6 +143,28 @@ def check_volume_status(volume_id, status):
     return False
 
 
+def get_cinder_volume(volume_id, debug_call_from=''):
+    cinder = get_cinder_client()
+
+    try:
+        return cinder.volumes.get(volume_id)
+    except Exception as err:
+        str_err = str(err)
+
+        log(
+            app="agent",
+            type="ERROR",
+            volume_cinder_id=volume_id,
+            code="get_vol_failed",
+            file_name="tools.py",
+            function_name="get_cinder_volume",
+            message="[FROM FUNC: %s] failed to get a volume" % debug_call_from,
+            exception=str_err)
+
+        if "could not be found" in str_err or "No volume with a name or ID of" in str_err:
+            return "volume-not-exists"
+
+
 def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path="/media"):
     """
 
@@ -157,7 +177,25 @@ def get_all_attached_volumes(virtual_machine_id, from_nova=True, mount_base_path
     if from_nova:
         # returns volume object the volume will be ().id
         nova = get_nova_client()
-        vols = nova.volumes.get_server_volumes(virtual_machine_id)
+
+        try:
+
+            vols = nova.volumes.get_server_volumes(virtual_machine_id)
+
+        except Exception as err:
+
+            log(
+                app="agent",
+                type="ERROR",
+                code="get_attached_vols_failed",
+                file_name="tools.py",
+                function_name="get_all_attached_volumes",
+                message="%s fetch server volumes failed" % get_current_tenant_description(),
+                exception=err
+            )
+
+            return None
+
         result = []
 
         for vol in vols:
@@ -207,7 +245,7 @@ def get_session():
     return sess
 
 
-def cinder_wait_for_volume_status(volume_id, status, timeout=0):
+def cinder_wait_for_volume_status(volume_id, status, timeout):
     '''
 
     :param volume_id:
@@ -221,8 +259,9 @@ def cinder_wait_for_volume_status(volume_id, status, timeout=0):
 
     cinder = get_cinder_client()
 
+    start_time = datetime.now()
 
-    while True:
+    while get_time_difference(start_time) < timeout:
         try:
 
             vol_reload = cinder.volumes.get(volume_id)
@@ -246,16 +285,34 @@ def cinder_wait_for_volume_status(volume_id, status, timeout=0):
                 exception=err
             )
 
-            time.sleep(1)
+            time.sleep(0.4)
+
+    return False
 
 
-# todo design a proper error management when calling openstack services using client API ies
+_c_client = None
+
+
 def get_cinder_client():
-    return c_client.Client(2, session=get_session())
+    if _c_client is None:
+        return c_client.Client(2, session=get_session())
+
+    return _c_client
+
+
+_c_client = get_cinder_client()
+
+c_nova_client = None
 
 
 def get_nova_client():
-    return n_client.Client(2, session=get_session())
+    if c_nova_client is None:
+        return n_client.Client(2, session=get_session())
+
+    return c_nova_client
+
+
+c_nova_client = get_nova_client()
 
 
 def create_sequential_folder(path, folder_name):
@@ -464,13 +521,13 @@ def log(message,
     if volume_cinder_id != '' and volume_cinder_id is not None:
         volume_cinder_id2 = " <volume:  " + volume_cinder_id + ">"
 
-    msg = "\n{%s} %s-%s [%s - %s] %s. %s [%s] %s\n" \
+    msg = "\n{%s} <%s>-%s **%s** - $$%s$$ %s. %s [%s] %s\n" \
           % (app,
              type,
              code,
-             function_name,
+             function_name + "()",
              file_name,
-             message,
+             message[0:400],
              volume_cinder_id2,
              datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
              str(exception_2))
@@ -480,17 +537,19 @@ def log(message,
     if insert_db is False:
         return msg
 
-    communication.insert_log(
-        experiment_id=experiment_id,
-        volume_cinder_id=volume_cinder_id,
-        app=app,
-        type=type,
-        code=code,
-        file_name=file_name,
-        function_name=function_name,
-        message=message,
-        exception_message=exception
-    )
+    if True or type.lower() != "info":
+
+        communication.insert_log(
+            experiment_id=experiment_id,
+            volume_cinder_id=volume_cinder_id,
+            app=app,
+            type=type,
+            code=code,
+            file_name=file_name,
+            function_name=function_name,
+            message=message,
+            exception_message=exception
+        )
 
     return msg
 

@@ -1,7 +1,6 @@
 import requests
 import json
 from datetime import datetime
-import sys
 import pdb
 
 __server_url = 'http://CinderDevelopmentEnv:8888/'
