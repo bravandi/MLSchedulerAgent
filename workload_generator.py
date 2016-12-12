@@ -403,10 +403,10 @@ class CinderWorkloadGenerator:
                     app="work_gen",
                     type="ERROR",
                     volume_cinder_id=volume.id,
-                    code="mount_mount",
+                    code="mount_stderr",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
-                    message="mount std err not empty. cmd: " + c3,
+                    message="mount std err not empty. cmd: " + " ".join(c3),
                     exception=err
                 )
                 return False
@@ -416,7 +416,7 @@ class CinderWorkloadGenerator:
                 app="work_gen",
                 volume_cinder_id=volume.id,
                 type="ERROR",
-                code="mount_failed",
+                code="mount_failed_exception",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
                 message="failed to run mount. return False",
@@ -639,15 +639,6 @@ class CinderWorkloadGenerator:
                 volume=volume)
 
             if mount_result is False:
-                tools.log(
-                    app="work_gen",
-                    type="ERROR",
-                    volume_cinder_id=volume.id,
-                    code="mount_failed",
-                    file_name="workload_generator.py",
-                    function_name="create_attach_volume",
-                    message="mount failed"
-                )
 
                 return volume.id, "mount-failed"
         else:
@@ -807,10 +798,10 @@ class CinderWorkloadGenerator:
                     if result_run_fio == 'failed-copy-perf-eval-fio-test-file':
                         # it might failed to detach because the volume is detached, or removed from
                         # the 'workgen_volumes' earlier than this point
-                        if self.delete_failed_to_attached_volumes.has_key(volume_id) is False:
-                            self.delete_failed_to_attached_volumes[volume_id] = 1
-
-                        workgen_volumes.remove(workgen_volume)
+                        # if self.delete_failed_to_attached_volumes.has_key(volume_id) is False:
+                        #     self.delete_failed_to_attached_volumes[volume_id] = 1
+                        #
+                        # workgen_volumes.remove(workgen_volume)
                         continue
 
                     # based on each volume creation time start storage workload generator for them
@@ -844,7 +835,7 @@ class CinderWorkloadGenerator:
                         workload_generator.start()
                 # endregion
 
-                time.sleep(0.8)
+                time.sleep(4)
         except Exception as err:
             pdb.set_trace()
 

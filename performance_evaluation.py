@@ -1,3 +1,4 @@
+from shutil import copyfile
 import tools
 from datetime import datetime
 import communication
@@ -12,7 +13,7 @@ class PerformanceEvaluationFIOTest:
 
     """
 
-    def __init__(self, test_path, volume_path, cinder_volume_id, show_output=False):
+    def __init__(self, test_path, test_name, volume_path, cinder_volume_id, show_output=False):
         """
 
         :param test_path:
@@ -25,6 +26,7 @@ class PerformanceEvaluationFIOTest:
         # threading.Thread.__init__(self)
         self.test_path = test_path
         self.volume_path = volume_path
+        self.test_name = test_name
         self.cinder_volume_id = cinder_volume_id
 
         tmp = type('', (object,), {'value': ''})()
@@ -119,9 +121,11 @@ class PerformanceEvaluationFIOTest:
         command = ""
 
         try:
-            command = "sudo " + PerformanceEvaluation.fio_bin_path + " " + test_instance.test_path
-            out, err, p = tools.run_command(
-                ["sudo", PerformanceEvaluation.fio_bin_path, test_instance.test_path], debug=False)
+            command = ["sudo", "docker", "run", "-v",
+                       test_instance.volume_path + ":/tmp/fio-data",
+                       "-e", "JOBFILES=" + test_instance.test_name, "clusterhq/fio-tool"]
+
+            out, err, p = tools.run_command(command, debug=False)
 
             if err != "":
                 tools.log(
@@ -129,10 +133,10 @@ class PerformanceEvaluationFIOTest:
                     type="ERROR",
                     volume_cinder_id=test_instance.cinder_volume_id,
                     code="perf_fio_std_err",
-                    file_name="workload_generator.py",
+                    file_name="performance_evaluation.py",
                     function_name="run_workload_generator",
                     message="command: %s | stdout: %s" %
-                            (command, out),
+                            (" ".join(command), out),
                     exception=err
                 )
 
@@ -147,7 +151,7 @@ class PerformanceEvaluationFIOTest:
                 type="ERROR",
                 volume_cinder_id=test_instance.cinder_volume_id,
                 code="run_perf_fio_failed",
-                file_name="workload_generator.py",
+                file_name="performance_evaluation.py",
                 function_name="run_workload_generator",
                 message="failed to run fio for perf test. command: " + command,
                 exception=err_ex
@@ -237,6 +241,7 @@ class PerformanceEvaluation:
 
         if PerformanceEvaluation.f_test_instances.has_key(cinder_volume_id) is False:
             f_test = PerformanceEvaluationFIOTest(test_path=test_path,
+                                                  test_name=test_name,
                                                   volume_path=volume_path,
                                                   cinder_volume_id=cinder_volume_id,
                                                   show_output=self.show_fio_output)
@@ -292,19 +297,20 @@ class PerformanceEvaluation:
             try:
                 # make sure the test file [*.fio] exists
                 if os.path.isfile(test_path) is False:
+                    copyfile(PerformanceEvaluation.fio_tests_conf_path + test_name, test_path)
 
-                    with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
-                        data = myfile.read().split('\n')
-                        myfile.close()
-
-                        data[1] = "directory=" + volume_path
-
-                        volume_test_file = open(test_path, 'w')
-
-                        for item in data:
-                            volume_test_file.write("%s\n" % item)
-
-                        volume_test_file.close()
+                    # with open(PerformanceEvaluation.fio_tests_conf_path + test_name, 'r') as myfile:
+                    #     data = myfile.read().split('\n')
+                    #     myfile.close()
+                    #
+                    #     data[1] = "directory=" + volume_path
+                    #
+                    #     volume_test_file = open(test_path, 'w')
+                    #
+                    #     for item in data:
+                    #         volume_test_file.write("%s\n" % item)
+                    #
+                    #     volume_test_file.close()
 
                 f_test.start()
 
@@ -316,7 +322,7 @@ class PerformanceEvaluation:
                     type="ERROR",
                     volume_cinder_id=cinder_volume_id,
                     code="concurrent_bug",
-                    file_name="workload_generator.py",
+                    file_name="performance_evaluation.py",
                     function_name="run_storage_workload_generator",
                     message="could not create the fio test file for workload generator",
                     exception=err)

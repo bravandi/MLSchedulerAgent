@@ -1,8 +1,10 @@
+from shutil import copyfile
 from multiprocessing import Process
 from datetime import datetime
 import communication
 import tools
 import os
+import pdb
 
 
 class StorageWorkloadGenerator:
@@ -15,8 +17,14 @@ class StorageWorkloadGenerator:
 
     """
 
-    def __init__(self, volume_id, workload_type, test_path,
-                 show_output=False, delay_between_storage_workload_generation=1.0):
+    def __init__(self,
+                 volume_id,
+                 workload_type,
+                 test_path,
+                 volume_path,
+                 fio_test_name,
+                 show_output=False,
+                 delay_between_storage_workload_generation=1.0):
         """
 
         :param workload_type:
@@ -25,6 +33,8 @@ class StorageWorkloadGenerator:
         """
 
         # threading.Thread.__init__(self)
+        self.volume_path = volume_path
+        self.fio_test_name = fio_test_name
         self.volume_id = volume_id
         self.workload_type = workload_type
         self.delay_between_storage_workload_generation = delay_between_storage_workload_generation
@@ -70,25 +80,29 @@ class StorageWorkloadGenerator:
 
     @staticmethod
     def create_storage_workload_generator(volume_id, fio_test_name, delay_between_storage_workload_generation):
+
         volume_path = "%s%s/" % (StorageWorkloadGenerator.mount_base_path, volume_id)
         test_path = volume_path + fio_test_name
 
         # CinderWorkloadGenerator.storage_workload_generator_instances.append(generator)
 
         try:
+
             if os.path.isfile(test_path) is False:
 
-                with open(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, 'r') as myfile:
-                    data = myfile.read().split('\n')
+                copyfile(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, test_path)
 
-                    data[1] = "directory=" + volume_path
-
-                    volume_test_file = open(test_path, 'w')
-
-                    for item in data:
-                        volume_test_file.write("%s\n" % item)
-
-                    volume_test_file.close()
+                # with open(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, 'r') as myfile:
+                #     data = myfile.read().split('\n')
+                #
+                #     data[1] = "directory=" + volume_path
+                #
+                #     volume_test_file = open(test_path, 'w')
+                #
+                #     for item in data:
+                #         volume_test_file.write("%s\n" % item)
+                #
+                #     volume_test_file.close()
         except Exception as err:
             tools.log(
                 app="work_gen",
@@ -107,9 +121,12 @@ class StorageWorkloadGenerator:
         generator = StorageWorkloadGenerator(
             volume_id=volume_id,
             workload_type="",
-            delay_between_storage_workload_generation=delay_between_storage_workload_generation,
+            test_path=test_path,
+            volume_path=volume_path,
+            fio_test_name=fio_test_name,
             show_output=False,
-            test_path=test_path)
+            delay_between_storage_workload_generation=delay_between_storage_workload_generation,
+            )
 
         return generator
 
@@ -139,10 +156,16 @@ class StorageWorkloadGenerator:
         command = ""
 
         try:
-            command = "sudo " + StorageWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
-            out, err, p = tools.run_command(
-                ["sudo", StorageWorkloadGenerator.fio_bin_path, generator_instance.test_path],
-                debug=False)
+            # command = "sudo " + StorageWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
+            # out, err, p = tools.run_command(
+            #     ["sudo", StorageWorkloadGenerator.fio_bin_path, generator_instance.test_path],
+            #     debug=False)
+
+            command = ["sudo", "docker", "run", "-v",
+                       generator_instance.volume_path + ":/tmp/fio-data",
+                       "-e", "JOBFILES=" + generator_instance.fio_test_name, "clusterhq/fio-tool"]
+
+            out, err, p = tools.run_command(command, debug=False)
 
             if err != "":
                 tools.log(
@@ -151,7 +174,7 @@ class StorageWorkloadGenerator:
                     code="run_fio",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
-                    message="command: %s | stdout: %s" % (command, out),
+                    message="command: %s | stdout: %s" % (" ".join(command), out),
                     volume_cinder_id=generator_instance.volume_id,
                     exception=err)
 
@@ -215,4 +238,4 @@ class StorageWorkloadGenerator:
                     ),
             volume_cinder_id=generator_instance.volume_id
             # ,insert_db=False
-            )
+        )
