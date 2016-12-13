@@ -348,10 +348,10 @@ class CinderWorkloadGenerator:
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
                 type="WARNING",
-                code="device_empty",
+                code="device_find_timeout",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="device is empty. device: [%s]" % device
+                message="Timeout to find device. timeout threshold > " + str(self.volume_attach_time_out)
             )
 
             return False
