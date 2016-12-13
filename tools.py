@@ -254,9 +254,6 @@ def cinder_wait_for_volume_status(volume_id, status, timeout):
     :return:
     '''
 
-    # todo validate input or create enumoration Status: creating, available, attaching, in-use, deleting, error, error_deleting, backing-up, restoring-backup, error_restoring, error_extending
-    # todo add time out
-
     cinder = get_cinder_client()
 
     start_time = datetime.now()
@@ -266,7 +263,7 @@ def cinder_wait_for_volume_status(volume_id, status, timeout):
 
             vol_reload = cinder.volumes.get(volume_id)
 
-            if vol_reload.status == "error":
+            if "error" in vol_reload.status.lower():
                 return False
 
             if vol_reload.status == status:
@@ -343,18 +340,6 @@ def create_sequential_folder(path, folder_name):
 
 
 def run_command(parameters, debug=False, no_pipe=False):
-    # shell = spur.SshShell(
-    #     hostname="10.18.75.153",
-    #     username="root",
-    #     private_key_file="/root/keys/vm-test.pem"
-    # )
-    #
-    # result = shell.run(["echo", "-n", "hello"])
-    # print(result.output)  # prints hello
-    # if parameters[0] != "sudo":
-    #     parameters.insert(0, "sudo")
-    # todo create a centeralized error management here
-
     if no_pipe is True:
         p = subprocess.Popen(parameters)
 
@@ -367,7 +352,7 @@ def run_command(parameters, debug=False, no_pipe=False):
         out, err = p.communicate()
 
         if debug:
-            print("\nrun_command:\n" + str(parameters) + "\nOUT -->" + out + "\nERROR --> " + err)
+            print("\nRUN_COMMAND:\n" + str(parameters) + "\nSTDOUT -->" + out + "\nSTDERR --> " + err)
 
         return out, err, p
 
@@ -378,13 +363,13 @@ def run_command2(command, debug=False):
     assert task.wait() == 0
 
     if debug:
-        print("\nrun_command:\n" + command + "\nOUT -->" + out)
+        print("\nRUN_COMMAND2:\n" + command + "\nOUT -->" + out)
 
     return out
 
 
 def check_is_device_attached(volume_id):
-    # todo
+    # todo consider below
     # must (1) store the 'device' in the volume table
     # (2) get the device using volume_id
     # (3) see if its in fdisk or not ... too much work

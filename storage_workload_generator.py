@@ -198,7 +198,7 @@ class StorageWorkloadGenerator:
 
             return
 
-        duration = tools.get_time_difference(start_time)
+        duration = round(tools.get_time_difference(start_time), 2)
 
         iops_measured = tools.get_iops_measures_from_fio_output(out)
 

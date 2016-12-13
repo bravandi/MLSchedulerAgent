@@ -170,7 +170,7 @@ class PerformanceEvaluationFIOTest:
 
         # print "test_instance.last_end_time:" + last_end_time.value
         last_end_time.value = str(datetime.now())
-        duration = tools.get_time_difference(last_start_time.value, last_end_time.value)
+        duration = round(tools.get_time_difference(last_start_time.value, last_end_time.value), 2)
 
         communication.insert_volume_performance_meter(
             experiment_id=PerformanceEvaluation.experiment["id"],

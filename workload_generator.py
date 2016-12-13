@@ -215,14 +215,6 @@ class CinderWorkloadGenerator:
             time.sleep(1)
             return None
 
-        # todo must call from scheduler it self
-        # communication.add_volume(
-        #     cinder_id=volume.id,
-        #     backend_id=tools.Backend.specifications["id"],
-        #     schedule_response=communication.ScheduleResponse.Accepted,
-        #     capacity=size
-        # )
-
         return volume
 
     def attach_volume(self, instance_id, volume_id):
@@ -292,9 +284,9 @@ class CinderWorkloadGenerator:
         :return:
         """
 
-        # todo I know there is a case that two volumes get attached at same time, therefore two devices gets ready
+        # WARNING I know there is a case that two volumes get attached at same time, therefore two devices gets ready
         # and it only picks one of them this can cause testing/writing to a wrong volume since device maps the
-        # underlying attachment process. Therore must detach and remove the volume.
+        # underlying attachment process. Therefore must detach and remove the volume.
         device = ''
         already_attached_devices = set()
 
@@ -316,7 +308,6 @@ class CinderWorkloadGenerator:
         start_time = datetime.now()
 
         # make sure the device is ready to be mounted, if takes more than XX seconds drop it
-        # todo make this a config
         while tools.get_time_difference(start_time) < self.volume_attach_time_out:
             try:
                 new_device = tools.get_attached_devices() - already_attached_devices
