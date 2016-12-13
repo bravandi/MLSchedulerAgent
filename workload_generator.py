@@ -146,7 +146,7 @@ class CinderWorkloadGenerator:
             out, err, p = tools.run_command(["sudo", "rm", "-d", "-r", CinderWorkloadGenerator.mount_path + "*"])
         except Exception as err:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="ERROR",
                 volume_cinder_id=volume.id,
                 code="failed_rm_all",
@@ -234,7 +234,7 @@ class CinderWorkloadGenerator:
             #
 
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="WARNING",
                 code="rejected|vol_status_error",
                 file_name="workload_generator.py",
@@ -246,7 +246,7 @@ class CinderWorkloadGenerator:
             return None
 
         tools.log(
-            app="work_gen",
+            app="MAIN_WORKGEN",
             type="INFO",
             file_name="workload_generator.py",
             function_name="attach_volume",
@@ -260,7 +260,7 @@ class CinderWorkloadGenerator:
             result = nova.volumes.create_server_volume(instance_id, volume_id)
         except Exception as err:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="ERROR",
                 code="nova_attach_failed",
                 file_name="workload_generator.py",
@@ -294,7 +294,7 @@ class CinderWorkloadGenerator:
             already_attached_devices = tools.get_attached_devices()
         except Exception as err:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="ERROR",
                 code="get_attached_devices",
                 file_name="workload_generator.py",
@@ -313,7 +313,7 @@ class CinderWorkloadGenerator:
                 new_device = tools.get_attached_devices() - already_attached_devices
             except Exception as err:
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     type="ERROR",
                     code="get_attached_devices",
                     file_name="workload_generator.py",
@@ -329,7 +329,7 @@ class CinderWorkloadGenerator:
             if len(new_device) > 0:
                 if len(new_device) > 1:
                     tools.log(
-                        app="work_gen",
+                        app="MAIN_WORKGEN",
                         type="ERROR",
                         code="concurrent_bug",
                         file_name="workload_generator.py",
@@ -344,7 +344,7 @@ class CinderWorkloadGenerator:
                 break
 
         tools.log(
-            app="work_gen",
+            app="MAIN_WORKGEN",
             type="INFO",
             file_name="workload_generator.py",
             function_name="mount_volume",
@@ -358,7 +358,7 @@ class CinderWorkloadGenerator:
             out, err, p = tools.run_command(c1, debug=True)
             if "in use by the system" in err:
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     type="ERROR",
                     code="in_use",
                     file_name="workload_generator.py",
@@ -370,7 +370,7 @@ class CinderWorkloadGenerator:
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
         except Exception as err:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
                 type="ERROR",
                 code="mkfs_failed",
@@ -389,7 +389,7 @@ class CinderWorkloadGenerator:
 
             if err != "":
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     volume_cinder_id=volume.id,
                     type="ERROR",
                     code="mount_mkdir",
@@ -402,7 +402,7 @@ class CinderWorkloadGenerator:
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
         except Exception as err:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="ERROR",
                 volume_cinder_id=volume.id,
                 code="mkdir_failed",
@@ -419,7 +419,7 @@ class CinderWorkloadGenerator:
 
             if err != "":
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     type="ERROR",
                     volume_cinder_id=volume.id,
                     code="mount_stderr",
@@ -432,7 +432,7 @@ class CinderWorkloadGenerator:
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
         except Exception as err:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
                 type="ERROR",
                 code="mount_failed_exception",
@@ -444,7 +444,7 @@ class CinderWorkloadGenerator:
             return False
 
         tools.log(
-            app="work_gen",
+            app="MAIN_WORKGEN",
             type="INFO",
             volume_cinder_id=volume.id,
             code="mount_done",
@@ -476,7 +476,7 @@ class CinderWorkloadGenerator:
                         "sudo", "rm", "-d", "-r", CinderWorkloadGenerator.mount_path + cinder_volume_id])
                 except Exception as err:
                     tools.log(
-                        app="work_gen",
+                        app="MAIN_WORKGEN",
                         type="ERROR",
                         volume_cinder_id=cinder_volume_id,
                         code="remove_mounted_folder_failed",
@@ -516,7 +516,7 @@ class CinderWorkloadGenerator:
 
         else:
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="ERROR",
                 code="concurrent_bug",
                 file_name="workload_generator.py",
@@ -562,7 +562,7 @@ class CinderWorkloadGenerator:
 
             if "Volume status must be available or error or error" in str(err) is False:
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     type="ERROR",
                     volume_cinder_id=volume_id,
                     code="cinder_del_vol_failed",
@@ -578,7 +578,7 @@ class CinderWorkloadGenerator:
 
             if "No volume with a name or ID of" in str(err) or "could not be found" in str(err):
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     type="WARNING",
                     volume_cinder_id=volume_id,
                     code="cinder_del_general_fail",
@@ -639,7 +639,7 @@ class CinderWorkloadGenerator:
         except Exception as err:
 
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="ERROR",
                 volume_cinder_id=volume_id,
                 code="nova_del_vol_failed",
@@ -652,7 +652,7 @@ class CinderWorkloadGenerator:
 
         # else:
         #     tools.log(
-        #         app="work_gen",
+        #         app="MAIN_WORKGEN",
         #         type="ERROR",
         #         volume_cinder_id=volume_id,
         #         code="detach_failed",
@@ -676,7 +676,7 @@ class CinderWorkloadGenerator:
         if attach_result is not None:
 
             tools.log(
-                app="work_gen",
+                app="MAIN_WORKGEN",
                 type="INFO",
                 code="mount_volume",
                 file_name="workload_generator.py",
@@ -708,7 +708,7 @@ class CinderWorkloadGenerator:
 
     def start_simulation(self):
         tools.log(
-            app="work_gen",
+            app="MAIN_WORKGEN",
             type="INFO",
             code="start_simulation",
             file_name="workload_generator.py",
@@ -806,7 +806,7 @@ class CinderWorkloadGenerator:
                     raise Exception("server-incapable-create-vol")
 
                 tools.log(
-                    app="work_gen",
+                    app="MAIN_WORKGEN",
                     type="INFO",
                     volume_cinder_id=volume_id,
                     code="create_attach_vol_result",
@@ -929,7 +929,7 @@ class CinderWorkloadGenerator:
         # except Exception as err:
         #
         #     tools.log(
-        #         app="work_gen",
+        #         app="MAIN_WORKGEN",
         #         type="ERROR",
         #         volume_cinder_id=volume_id,
         #         code="simulation_failed",

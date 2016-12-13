@@ -58,7 +58,7 @@ class StorageWorkloadGenerator:
         pass
         # if self.proc is None:
         #     tools.log(
-        #         app="W_STORAGE_GEN",
+        #         app="STORAGE_GEN",
         #         type="ERROR",
         #         code="proc_null_terminate",
         #         file_name="workload_generator.py",
@@ -148,7 +148,7 @@ class StorageWorkloadGenerator:
                        "-e", "JOBFILES=" + generator_instance.fio_test_name, "clusterhq/fio-tool"]
 
             tools.log(
-                app="W_STORAGE_GEN",
+                app="STORAGE_GEN",
                 type="INFO",
                 code="wgen_run_gen_fio",
                 file_name="workload_generator.py",
@@ -162,9 +162,9 @@ class StorageWorkloadGenerator:
 
             if err != "":
                 tools.log(
-                    app="W_STORAGE_GEN",
+                    app="STORAGE_GEN",
                     type="ERROR",
-                    code="run_fio_stderr",
+                    code="wgen_fio_stderr",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
                     message="command: %s | stdout: %s" % (" ".join(command), out),
@@ -179,9 +179,9 @@ class StorageWorkloadGenerator:
 
         except Exception as err_ex:
             tools.log(
-                app="W_STORAGE_GEN",
+                app="STORAGE_GEN",
                 type="ERROR",
-                code="run_fio_cmd",
+                code="wgen_fio_exp",
                 file_name="workload_generator.py",
                 function_name="run_workload_generator",
                 message="failed to run fio for storage gen. command: " + " ".join(command),
@@ -212,7 +212,7 @@ class StorageWorkloadGenerator:
             out = "SHOW_OUTPUT = False"
 
         tools.log(
-            app="W_STORAGE_GEN",
+            app="STORAGE_GEN",
             type="INFO",
             code="iops_wgen",
             file_name="workload_generator.py",

@@ -77,7 +77,7 @@ class PerformanceEvaluationFIOTest:
         if time_out is True:
 
             tools.log(
-                app="perf_eval",
+                app="PERF_EVAL",
                 type="WARNING",
                 volume_cinder_id=self.cinder_volume_id,
                 code="terminate_time_out",
@@ -88,7 +88,7 @@ class PerformanceEvaluationFIOTest:
 
         else:
             tools.log(
-                app="perf_eval",
+                app="PERF_EVAL",
                 type="INFO",
                 volume_cinder_id=self.cinder_volume_id,
                 code="terminate_from_work_gen",
@@ -117,7 +117,7 @@ class PerformanceEvaluationFIOTest:
                        "-e", "JOBFILES=" + test_instance.test_name, "clusterhq/fio-tool"]
 
             tools.log(
-                app="perf_eval",
+                app="PERF_EVAL",
                 type="INFO",
                 volume_cinder_id=test_instance.cinder_volume_id,
                 code="perf_run_eval_fio",
@@ -131,10 +131,10 @@ class PerformanceEvaluationFIOTest:
 
             if err != "":
                 tools.log(
-                    app="perf_eval",
+                    app="PERF_EVAL",
                     type="ERROR",
                     volume_cinder_id=test_instance.cinder_volume_id,
-                    code="perf_fio_std_err",
+                    code="perf_fio_stderr",
                     file_name="performance_evaluation.py",
                     function_name="run_workload_generator",
                     message="command: %s | stdout: %s" %
@@ -151,10 +151,10 @@ class PerformanceEvaluationFIOTest:
         except Exception as err_ex:
 
             tools.log(
-                app="perf_eval",
+                app="PERF_EVAL",
                 type="ERROR",
                 volume_cinder_id=test_instance.cinder_volume_id,
-                code="run_perf_fio_failed",
+                code="perf_fio_exp",
                 file_name="performance_evaluation.py",
                 function_name="run_workload_generator",
                 message="failed to run fio for perf test. command: " + " ".join(command),
@@ -187,7 +187,7 @@ class PerformanceEvaluationFIOTest:
             out = "SHOW_OUTPUT = False"
 
         tools.log(
-            app="perf_eval",
+            app="PERF_EVAL",
             type="INFO",
             volume_cinder_id=test_instance.cinder_volume_id,
             code="iops_perf",
@@ -246,7 +246,7 @@ class PerformanceEvaluation:
             # cc = tools.get_volume_status(self.volume_id)
             # z = cc.status
             tools.log(
-                app="perf_eval",
+                app="PERF_EVAL",
                 type="ERROR",
                 volume_cinder_id=self.volume_id,
                 code="failed_copy_perf_fio_file",
