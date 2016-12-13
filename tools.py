@@ -506,6 +506,9 @@ def get_attached_devices(match="vd", debug=False):
     return result
 
 
+save_info_logs = True
+
+
 def log(message,
         volume_cinder_id='',
         type='',
@@ -541,18 +544,20 @@ def log(message,
     if insert_db is False:
         return msg
 
-    if True or type.lower() != "info":
-        communication.insert_log(
-            experiment_id=experiment_id,
-            volume_cinder_id=volume_cinder_id,
-            app=app,
-            type=type,
-            code=code,
-            file_name=file_name,
-            function_name=function_name,
-            message=message,
-            exception_message=exception
-        )
+    if type.lower() == "info" and save_info_logs is False:
+        return msg
+
+    communication.insert_log(
+        experiment_id=experiment_id,
+        volume_cinder_id=volume_cinder_id,
+        app=app,
+        type=type,
+        code=code,
+        file_name=file_name,
+        function_name=function_name,
+        message=message,
+        exception_message=exception
+    )
 
     return msg
 

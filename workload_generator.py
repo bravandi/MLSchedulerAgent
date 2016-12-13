@@ -1009,11 +1009,15 @@ if __name__ == "__main__":
     parser.add_argument('--perf_show_fio_output', type=str, metavar='', required=False, default='False',
                         help='show fio test output')
 
-    # Performance Evaluation Parameters
+    parser.add_argument('--save_info_logs', type=str, metavar='', required=False, default='False',
+                        help='save INFO logs in database ?')
 
+    # Performance Evaluation Parameters
 
     args = parser.parse_args()
 
+    tools.save_info_logs = tools.str2bool(args.save_info_logs)
+    
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name=args.fio_test_name,
