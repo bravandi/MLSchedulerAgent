@@ -343,6 +343,19 @@ class CinderWorkloadGenerator:
                 device = new_device.pop()
                 break
 
+        if device.strip() == '' or device is None:
+            tools.log(
+                app="MAIN_WORKGEN",
+                volume_cinder_id=volume.id,
+                type="WARNING",
+                code="device_empty",
+                file_name="workload_generator.py",
+                function_name="mount_volume",
+                message="device is empty. device: [%s]" % device
+            )
+
+            return False
+
         tools.log(
             app="MAIN_WORKGEN",
             type="INFO",
@@ -352,6 +365,8 @@ class CinderWorkloadGenerator:
             volume_cinder_id=volume.id,
             insert_db=False)
 
+        c1 = c2 = c3 = None
+
         # log = ""
         try:
             c1 = ["sudo", 'mkfs', '-t', "ext3", device]
@@ -360,11 +375,12 @@ class CinderWorkloadGenerator:
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
-                    code="in_use",
+                    code="mkfs_stderr",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
                     volume_cinder_id=volume.id,
-                    message="cannot mount because it is in use. %s out-->%s err-->%s  \n" % (c1, out, err)
+                    message="Format/mkfs failed. command: %s STDOUT: %s" % (" ".join(c1), out),
+                    exception=err
                 )
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
@@ -373,10 +389,10 @@ class CinderWorkloadGenerator:
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
                 type="ERROR",
-                code="mkfs_failed",
+                code="mkfs_exception",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="failed to run mkfs. return False",
+                message="failed to run mkfs. command: " + " ".join(c1),
                 exception=err
             )
             return False
@@ -392,10 +408,10 @@ class CinderWorkloadGenerator:
                     app="MAIN_WORKGEN",
                     volume_cinder_id=volume.id,
                     type="ERROR",
-                    code="mount_mkdir",
+                    code="mkdir_stderr",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
-                    message="mkdir stderr not empty. %s out-->%s \n" % (c2, out),
+                    message="mkdir stderr not empty. command: %s stdout:%s " % (" ".join(c2), out),
                     exception=err
                 )
                 return False
@@ -405,10 +421,10 @@ class CinderWorkloadGenerator:
                 app="MAIN_WORKGEN",
                 type="ERROR",
                 volume_cinder_id=volume.id,
-                code="mkdir_failed",
+                code="mkdir_exception",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="failed to run mkdir. return False",
+                message="failed to run mkdir. command: " + " ".join(c2),
                 exception=err
             )
             return False
@@ -425,7 +441,7 @@ class CinderWorkloadGenerator:
                     code="mount_stderr",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
-                    message="mount std err not empty. cmd: " + " ".join(c3),
+                    message="mount stderr not empty. cmd: " + " ".join(c3),
                     exception=err
                 )
                 return False
@@ -435,10 +451,10 @@ class CinderWorkloadGenerator:
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
                 type="ERROR",
-                code="mount_failed_exception",
+                code="mount_exception",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
-                message="failed to run mount. return False",
+                message="failed to run mount. command:" + " ".join(c3),
                 exception=err
             )
             return False
