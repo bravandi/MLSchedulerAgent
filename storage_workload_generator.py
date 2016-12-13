@@ -178,7 +178,8 @@ class StorageWorkloadGenerator:
                     volume_cinder_id=generator_instance.volume_id,
                     exception=err)
 
-                tools.kill_proc(p.pid)
+                # tools.kill_proc(p.pid)
+                tools.run_command2("sudo systemctl start docker")
 
                 return
 
@@ -193,7 +194,8 @@ class StorageWorkloadGenerator:
                 volume_cinder_id=generator_instance.volume_id,
                 exception=err_ex)
 
-            tools.kill_proc(p.pid)
+            # tools.kill_proc(p.pid)
+            tools.run_command2("sudo systemctl start docker")
 
             return
 

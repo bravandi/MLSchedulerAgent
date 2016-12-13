@@ -131,6 +131,8 @@ function c_debugClient(){
 
 }
 
+sudo systemctl start docker
+
 sudo timedatectl set-timezone America/New_York
 #cd /root/cinder/
 htop

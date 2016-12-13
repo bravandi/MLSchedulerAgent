@@ -140,7 +140,8 @@ class PerformanceEvaluationFIOTest:
                     exception=err
                 )
 
-                tools.kill_proc(p.pid)
+                # tools.kill_proc(p.pid)
+                tools.run_command2("sudo systemctl start docker")
 
                 return
 
@@ -157,7 +158,8 @@ class PerformanceEvaluationFIOTest:
                 exception=err_ex
             )
 
-            tools.kill_proc(p.pid)
+            # tools.kill_proc(p.pid)
+            tools.run_command2("sudo systemctl start docker")
 
             return
 
