@@ -221,10 +221,20 @@ class PerformanceEvaluation:
 
         pass
 
+    @staticmethod
+    def is_fio_running(cinder_id):
+
+        if PerformanceEvaluation.f_test_instances.has_key(cinder_id):
+            return PerformanceEvaluation.f_test_instances[cinder_id].is_alive()
+
+        return False
+
     def terminate_fio_test(self, cinder_id):
 
         if PerformanceEvaluation.f_test_instances.has_key(cinder_id):
             PerformanceEvaluation.f_test_instances[cinder_id].terminate_ftest()
+
+            del PerformanceEvaluation.f_test_instances[cinder_id]
 
     def fio_test(self, cinder_volume_id, test_name):
         """
@@ -328,17 +338,6 @@ class PerformanceEvaluation:
                     exception=err)
 
                 return 'failed-copy-perf-eval-fio-test-file'
-
-    def run_fio_test_old(self):
-
-        attached_volumes = tools.get_all_attached_volumes(self.current_vm_id)
-
-        if attached_volumes is None:
-            return None
-
-        for volume in attached_volumes:
-            self.fio_test(cinder_volume_id=volume.id,
-                          test_name=self.fio_test_name)
 
     def run_fio_test(self, volume_id):
 

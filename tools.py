@@ -383,6 +383,25 @@ def run_command2(command, debug=False):
     return out
 
 
+def check_is_device_attached(volume_id):
+    # todo
+    # must (1) store the 'device' in the volume table
+    # (2) get the device using volume_id
+    # (3) see if its in fdisk or not ... too much work
+    return False
+    out, err, p = run_command(["sudo", "fdisk", "-l"], debug=False)
+
+    mounted = grep(out, volume_id, openstack=False)
+
+    if len(mounted) > 0:
+        # print mounted[0].replace("  ", " ")
+        # print mounted[0].split(r' ', mounted[0].replace("  ", " "))
+        # print re.split(r' ', mounted[0].strip(' '))
+        return mounted[0].split(' ')[0]
+
+    return ''
+
+
 def check_is_device_mounted_to_volume(volume_id):
     """
 
@@ -538,7 +557,6 @@ def log(message,
         return msg
 
     if True or type.lower() != "info":
-
         communication.insert_log(
             experiment_id=experiment_id,
             volume_cinder_id=volume_cinder_id,
@@ -591,7 +609,15 @@ def kill_proc(pid):
         # assert task.wait() == 0
 
 
+def kill_cinder_api():
+
+    return run_command2(
+        "ssh -i /home/centos/keys/id_rsa.pem root@CinderDevelopmentEnv \"ps -ef | grep cinder-api | grep -v grep | awk '{print \$2}' | xargs kill -9\"")
+
+
 if __name__ == "__main__":
-    kill_proc(1926)
-    print("DOOOOONE")
+    out = kill_cinder_api()
+
+    print (out)
+
     pass

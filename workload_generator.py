@@ -8,6 +8,8 @@ import pdb
 import numpy as np
 import performance_evaluation as perf
 import storage_workload_generator as storage_workload_gen
+import novaclient
+import cinderclient
 
 
 class CinderWorkloadGenerator:
@@ -53,7 +55,7 @@ class CinderWorkloadGenerator:
         self.wait_volume_status_timeout = wait_volume_status_timeout
         self.volume_attach_time_out = volume_attach_time_out
 
-        self.delete_failed_to_attached_volumes = {}  # contains volume id
+        self.delete_detach_volumes_list = {}  # contains volume id
 
     def detach_delete_all_volumes(self):
         """
@@ -103,7 +105,7 @@ class CinderWorkloadGenerator:
                 device = tools.check_is_device_mounted_to_volume(volume.id)
 
                 if device == '':
-                    if self._detach_volume(self.current_vm_id, volume.id) == 'successful':
+                    if self._detach_volume(self.current_vm_id, volume.id) in ['successful', 'not-found']:
                         volumes_copy.remove(volume)
 
         # wait until all remaining volumes are detached then attempt to remove them
@@ -173,7 +175,29 @@ class CinderWorkloadGenerator:
 
         try:
             volume = cinder.volumes.create(size, name="%s,%s" % (CinderWorkloadGenerator.experiment["id"], str(db_id)))
+
+        except cinderclient.exceptions.ClientException as err:
+
+            # ERR: The server has either erred or is incapable of performing the requested operation
+
+            # todo shutdown the application in this case. even worse, might need to reset the api server
+            # ERR: The server has either erred or is incapable of performing the requested operation
+
+            tools.log(
+                app="agent",
+                type="ERROR",
+                code="server-incapable-create-vol",
+                file_name="workload_generator.py",
+                function_name="create_volume",
+                message="failed to get create volume",
+                exception=err
+            )
+
+            return 'server-incapable-create-vol'
+
         except Exception as err:
+
+
             tools.log(
                 app="agent",
                 type="ERROR",
@@ -489,10 +513,10 @@ class CinderWorkloadGenerator:
             # detach volume
             result = self._detach_volume(self.current_vm_id, cinder_volume_id)
 
-            if result == "volume-not-exists":
+            if result == "not-found":
                 return True
 
-            if result == "nova-vol-del-failed":
+            if result == "nova-vol-detach-failed":
                 return False
 
         else:
@@ -532,25 +556,17 @@ class CinderWorkloadGenerator:
             communication.delete_volume(
                 cinder_id=volume_id,
                 is_deleted=is_deleted)
-        except Exception as err:
 
-            if "No volume with a name or ID of" in err or "could not be found" in err:
-                tools.log(
-                    app="work_gen",
-                    type="WARNING",
-                    volume_cinder_id=volume_id,
-                    code="del_not_exist_vol",
-                    file_name="workload_generator.py",
-                    function_name="_delete_volume",
-                    message="[FROM FUNC: %s] attempt delete none existing volume" % debug_call_from,
-                    exception=err)
+            return True
 
-                return True
-            else:
+        except cinderclient.exceptions.NotFound as err:
+            return True
 
-                cinder_vol = tools.get_cinder_volume(volume_id)
-                # STATUS: %s        cinder_vol.status
-                # Invalid volume: Volume status must be available or error or error_restoring or error_extending and must not be migrating, attached, belong to a consistency group or have snapshots. (HTTP 400) (Request-ID: req-48020904-b6b5-4c4c-9d3c-baad2539e224)
+        except cinderclient.exceptions.BadRequest as err:
+            #'Invalid volume: Volume status must be available or error or error_restoring or error_extending and must not be migrating, attached, belong to a consistency group or have snapshots. (HTTP 400) (Request-ID: req-41d22e3e-9805-4da4-b184-e27f45d8fe01)'
+
+            if "Volume status must be available or error or error" in str(err) is False:
+
                 tools.log(
                     app="work_gen",
                     type="ERROR",
@@ -558,17 +574,32 @@ class CinderWorkloadGenerator:
                     code="cinder_del_vol_failed",
                     file_name="workload_generator.py",
                     function_name="_delete_volume",
-                    message="[FROM FUNC: %s, STATUS: %s] cinder client failed to delete the volume" %
-                            (debug_call_from, cinder_vol.status),
+                    # message="[FROM FUNC: %s, STATUS: %s] cinder client failed to delete the volume" %
+                    #         (debug_call_from, cinder_vol.status),
+                    message="[FROM FUNC: %s] Bad request" % debug_call_from,
                     exception=err)
 
-            if is_deleted == 2:
-                # try to delete later with is_delete = 2 that means volume wont be counted in reports
-                self.delete_failed_to_attached_volumes[volume_id] = 2
+            # pass
+        except Exception as err:
 
-            return False
+            if "No volume with a name or ID of" in str(err) or "could not be found" in str(err):
+                tools.log(
+                    app="work_gen",
+                    type="WARNING",
+                    volume_cinder_id=volume_id,
+                    code="cinder_del_general_fail",
+                    file_name="workload_generator.py",
+                    function_name="_delete_volume",
+                    message="[FROM FUNC: %s] attempt to delete failed" % debug_call_from,
+                    exception=err)
 
-        return True
+                return True
+
+            # try to delete later. if is_delete = 2, then means volume wont be counted in reports
+        if self.delete_detach_volumes_list.has_key(volume_id) is False:
+            self.delete_detach_volumes_list[volume_id] = is_deleted
+
+        return False
 
     def _detach_volume(self, nova_id, volume):
         nova = tools.get_nova_client()
@@ -578,43 +609,71 @@ class CinderWorkloadGenerator:
         else:
             volume_id = volume.id
 
-        vol = tools.get_cinder_volume(volume_id, debug_call_from="_detach_volume")
-        if vol == "volume-not-exists":
-            return "volume-not-exists"
+        # vol = tools.get_cinder_volume(volume_id, debug_call_from="_detach_volume")
+        # if vol == "volume-not-exists":
+        #     return "volume-not-exists"
 
-        if vol.status == "in-use":
-            try:
-                nova.volumes.delete_server_volume(nova_id, volume_id)
-            except Exception as err:
+        # if vol.status == "in-use":
+        try:
+            nova.volumes.delete_server_volume(nova_id, volume_id)
 
-                tools.log(
-                    app="work_gen",
-                    type="ERROR",
-                    volume_cinder_id=volume_id,
-                    code="nova_del_vol_failed",
-                    file_name="workload_generator.py",
-                    function_name="_detach_volume",
-                    message="attempt to detach a volume, openstack failed.",
-                    exception=err)
+        except novaclient.exceptions.NotFound as err:
+            return 'not-found'
 
-                return 'nova-vol-del-failed'
+        except novaclient.exceptions.BadRequest as err:
 
-        else:
+            if tools.get_volume_status(volume_id) in ["available", 'error']:
+                # in case of str(err) --> Invalid volume: Volume must be attached in order to detach.
+                return 'successful'
+
+            # in case of str(err) --> #Invalid input received: Invalid volume: Unable to detach volume.
+            # Volume status must be 'in-use' and attach_status must be 'attached' to detach.
+            # Lets try to check if volume is not attached, then reset its status to error
+
+            # todo tools.check_is_device_attached() should be called but it is too much work to implement
+            # hopefully will work fun now. Because tools.check_is_device_mounted_to_volume is based
+            # on df not fdisk
+            if tools.check_is_device_mounted_to_volume(volume_id) == '':
+                cinder = tools.get_cinder_client()
+                try:
+                    cinder.volumes.reset_state(volume_id, 'error', 'detached')
+                except Exception as err:
+                    return "reset-status-failed"
+
+            return "attempted-reset-state"
+
+        except Exception as err:
+
             tools.log(
                 app="work_gen",
                 type="ERROR",
                 volume_cinder_id=volume_id,
-                code="detach_failed",
+                code="nova_del_vol_failed",
                 file_name="workload_generator.py",
                 function_name="_detach_volume",
-                message="attempted to detach, but volume status is not 'in-use' it is %s" % vol.status)
+                message="attempt to detach a volume, openstack failed.",
+                exception=err)
 
-            # raise Exception("ERROR [_detach_volume] volume status is not 'in-use' it is %s volume_id: %s" %
-            #                 (vol.status, volume_id))
+            return 'nova-vol-detach-failed'
+
+        # else:
+        #     tools.log(
+        #         app="work_gen",
+        #         type="ERROR",
+        #         volume_cinder_id=volume_id,
+        #         code="detach_failed",
+        #         file_name="workload_generator.py",
+        #         function_name="_detach_volume",
+        #         message="attempted to detach, but volume status is not 'in-use' it is %s" % vol.status)
+
         return 'successful'
 
     def create_attach_mount_volume(self):
         volume = self.create_volume()
+
+        if volume == 'server-incapable-create-vol':
+
+            return None, volume
 
         if volume is None:
             return None, "failed"
@@ -639,7 +698,6 @@ class CinderWorkloadGenerator:
                 volume=volume)
 
             if mount_result is False:
-
                 return volume.id, "mount-failed"
         else:
             return volume.id, "attach-failed"
@@ -666,7 +724,7 @@ class CinderWorkloadGenerator:
 
         self.detach_delete_all_volumes()
 
-        workgen_volumes = []  # "id": volume_id, "generator":, "last_test_time":, "create_time"
+        workgen_volumes = []  # "id": volume_id, "generator":, "last_test_time":, "create_time", "active":
 
         last_rejected_create_volume_time = None
         rejection_hold_create_new_volume_request = False
@@ -674,180 +732,187 @@ class CinderWorkloadGenerator:
         last_create_volume_time = None
         workload_generate_hold_create_new_volume_request = False
 
-        try:
+        # try:
 
-            # never use continue in this loop, there are multiple independent tasks here
-            while True:
-                # region remove buggy volumes
+        # never use continue in this loop, there are multiple independent tasks here
+        while True:
+            # region delete detach volumes list
+            for volume_id in self.delete_detach_volumes_list.keys():
 
-                for volume_id in self.delete_failed_to_attached_volumes.keys():
+                find_workload_gen = [wg for wg in workgen_volumes if wg["id"] == volume_id]
+                workload_gen = None
+                if len(find_workload_gen) == 1:
+                    workload_gen = find_workload_gen[0]
 
-                    if self.detach_volume(cinder_volume_id=volume_id):
-                        out, err, p = tools.run_command([
-                            "sudo", "rm", "-d", "-r", CinderWorkloadGenerator.mount_path + volume_id])
+                if perf.PerformanceEvaluation.is_fio_running(volume_id):
+                    continue  # wait until perf-fio-test is done
+                if workload_gen is not None and \
+                                workload_gen["generator"] is not None and \
+                                workload_gen["generator"].is_alive() is True:
+                    continue  # wait until workgen-fio is done
 
-                        if self._delete_volume(
-                                volume_id,
-                                is_deleted=self.delete_failed_to_attached_volumes[volume_id],
-                                debug_call_from="start_simulation") is True:
-                            #
-                            del self.delete_failed_to_attached_volumes[volume_id]
-                # endregion
+                if self.detach_volume(cinder_volume_id=volume_id):
+                    out, err, p = tools.run_command([
+                        "sudo", "rm", "-d", "-r", CinderWorkloadGenerator.mount_path + volume_id])
 
-                # hold requesting new volumes if one is rejected
-                if rejection_hold_create_new_volume_request is True:
+                    if self._delete_volume(
+                            volume_id,
+                            is_deleted=self.delete_detach_volumes_list[volume_id],
+                            debug_call_from="start_simulation") is True:
+                        #
+                        del self.delete_detach_volumes_list[volume_id]
+
+                        if workload_gen in workgen_volumes:
+                            workgen_volumes.remove(workload_gen)
+            # endregion
+
+            # hold requesting new volumes if one is rejected
+            if rejection_hold_create_new_volume_request is True:
+                rejection_hold_create_new_volume_request = False
+
+                gap = int(
+                    np.random.choice(self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1]))
+
+                if tools.get_time_difference(last_rejected_create_volume_time) > gap:
+                    #
                     rejection_hold_create_new_volume_request = False
 
-                    gap = int(np.random.choice(self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1]))
+            # apply create volume generation gap
+            if workload_generate_hold_create_new_volume_request is True:
+                #
+                gap = int(np.random.choice(self.delay_between_create_volume_generation[0], 1,
+                                           p=self.delay_between_create_volume_generation[1]))
 
-                    if tools.get_time_difference(last_rejected_create_volume_time) > gap:
-                        #
-                        rejection_hold_create_new_volume_request = False
-
-                # apply create volume generation gap
-                if workload_generate_hold_create_new_volume_request is True:
+                if tools.get_time_difference(last_create_volume_time) > gap:
                     #
-                    gap = int(np.random.choice(self.delay_between_create_volume_generation[0], 1,
-                                               p=self.delay_between_create_volume_generation[1]))
+                    workload_generate_hold_create_new_volume_request = False
 
-                    if tools.get_time_difference(last_create_volume_time) > gap:
-                        #
-                        workload_generate_hold_create_new_volume_request = False
+            # region start request new volumes
+            active_workgen_volumes = [workgen_volume for workgen_volume in workgen_volumes if
+                                      workgen_volume["active"] is True]
 
-                # region start request new volumes
+            if workload_generate_hold_create_new_volume_request is False and \
+                            rejection_hold_create_new_volume_request is False and \
+                            len(active_workgen_volumes) < int(
+                        np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
 
-                # volume request section - will start storage ONE TIME workload generator on the created-attached volume
-                if workload_generate_hold_create_new_volume_request is False and \
-                                rejection_hold_create_new_volume_request is False and \
-                                len(workgen_volumes) < int(
-                            np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
+                last_create_volume_time = datetime.now()
+                workload_generate_hold_create_new_volume_request = True
 
-                    last_create_volume_time = datetime.now()
-                    workload_generate_hold_create_new_volume_request = True
+                volume_id, result = self.create_attach_mount_volume()
 
-                    volume_id, result = self.create_attach_mount_volume()
+                if result == 'server-incapable-create-vol':
+                    raise Exception("server-incapable-create-vol")
 
-                    tools.log(
-                        app="work_gen",
-                        type="INFO",
-                        volume_cinder_id=volume_id,
-                        code="create_attach_vol_result",
-                        file_name="workload_generator.py",
-                        function_name="create_attach_mount_volume",
-                        message="CREATE_ATTACH RESULT: %s, %s" % (volume_id, result))
+                tools.log(
+                    app="work_gen",
+                    type="INFO",
+                    volume_cinder_id=volume_id,
+                    code="create_attach_vol_result",
+                    file_name="workload_generator.py",
+                    function_name="create_attach_mount_volume",
+                    message="CREATE_ATTACH RESULT: %s, %s" % (volume_id, result))
 
-                    if volume_id is None or result == "failed":
-                        # assume the reason is the volume_request is rejected
-                        last_rejected_create_volume_time = datetime.now()
-                        rejection_hold_create_new_volume_request = True
+                if volume_id is None or result == "failed":
+                    # assume the reason is the volume_request is rejected
+                    last_rejected_create_volume_time = datetime.now()
+                    rejection_hold_create_new_volume_request = True
 
-                    elif result == "mount-failed" or result == "attach-failed":
-                        # pdb.set_trace()
-                        self.delete_failed_to_attached_volumes[volume_id] = 2
+                elif result == "mount-failed" or result == "attach-failed":
 
-                    elif volume_id is not None or result == "successful":
-                        volume_create_time = datetime.now()
+                    self.delete_detach_volumes_list[volume_id] = 2
 
-                        workgen_volumes.append({
-                            "id": volume_id,
-                            "generator": None,  # will create upon time to run test
-                            "last_test_time": datetime.now(),
-                            "create_time": volume_create_time
-                        })
-                # endregion
+                elif volume_id is not None or result == "successful":
+                    volume_create_time = datetime.now()
 
-                # region remove expired volumes
-                for workgen_volume in workgen_volumes[:]:
-                    if tools.get_time_difference(workgen_volume["create_time"]) > \
-                            int(np.random.choice(
-                                self.volume_life_seconds[0],
-                                1,
-                                p=self.volume_life_seconds[1])):
+                    new_workgen_volume = {
+                        "id": volume_id,
+                        "generator": None,  # will create upon time to run test
+                        "last_test_time": datetime.now(),
+                        "create_time": volume_create_time,
+                        "active": True
+                    }
 
-                        # terminate fio tests on the performance eval instance
-                        # no need to call <workgen_volume["generator"].terminate()>, it terminates automatically
+                    workgen_volumes.append(new_workgen_volume)
+                    active_workgen_volumes.append(new_workgen_volume)
+            # endregion
 
-                        self.performance_evaluation_instance.terminate_fio_test(workgen_volume["id"])
-
-                        result = self.detach_delete_volume_rm_folder(workgen_volume["id"])
-
-                        if result == "successful":
-                            pass
-
-                        elif result == "delete-failed" or result == "detach-failed":
-                            self.delete_failed_to_attached_volumes[workgen_volume["id"]] = 1
-
-                        elif result == "rm-failed":
-                            # it will try to remove the old volume folder in media upon checking the
-                            # self.delete_failed_to_attached_volumes
-                            pass
-
-                        workgen_volumes.remove(workgen_volume)
-                # endregion
-
-                # start performance evaluations
-                # self.performance_evaluation_instance.run_fio_test()
-
-                # region start perf evals and storage generators
-
-                for workgen_volume in workgen_volumes[:]:
-                    volume_id = workgen_volume["id"]
-
-                    result_run_fio = self.performance_evaluation_instance.run_fio_test(volume_id)
-
-                    if result_run_fio == 'failed-copy-perf-eval-fio-test-file':
-                        # it might failed to detach because the volume is detached, or removed from
-                        # the 'workgen_volumes' earlier than this point
-                        # if self.delete_failed_to_attached_volumes.has_key(volume_id) is False:
-                        #     self.delete_failed_to_attached_volumes[volume_id] = 1
-                        #
-                        # workgen_volumes.remove(workgen_volume)
-                        continue
-
-                    # based on each volume creation time start storage workload generator for them
-                    if tools.get_time_difference(workgen_volume["last_test_time"]) >= int(np.random.choice(
-                            self.delay_between_storage_workload_generation[0],
+            # region remove expired volumes
+            for workgen_volume in active_workgen_volumes:
+                if tools.get_time_difference(workgen_volume["create_time"]) > \
+                        int(np.random.choice(
+                            self.volume_life_seconds[0],
                             1,
-                            p=self.delay_between_storage_workload_generation[1]
-                    )):
+                            p=self.volume_life_seconds[1])):
+                    # terminate fio tests on the performance eval instance
+                    # no need to call <workgen_volume["generator"].terminate()>, it terminates automatically
 
-                        workload_generator = workgen_volume["generator"]
+                    self.performance_evaluation_instance.terminate_fio_test(workgen_volume["id"])
 
-                        if workload_generator is None:
-                            workload_generator = \
-                                storage_workload_gen.StorageWorkloadGenerator.create_storage_workload_generator(
-                                    volume_id=volume_id,
-                                    fio_test_name=self.fio_test_name,
-                                    delay_between_storage_workload_generation=self.delay_between_storage_workload_generation
-                                )
+                    self.delete_detach_volumes_list[workgen_volume["id"]] = 1
+                    workgen_volume["active"] = False
 
-                            if workload_generator == 'failed-copy-fio-file':
-                                # it might failed to detach because the volume is detached, or removed from
-                                # the 'workgen_volumes' earlier than this point
-                                if self.delete_failed_to_attached_volumes.has_key(volume_id) is False:
-                                    self.delete_failed_to_attached_volumes[volume_id] = 1
+            # endregion
 
-                                workgen_volumes.remove(workgen_volume)
-                                continue
+            # region start perf evals and storage generators
 
-                            workgen_volume["generator"] = workload_generator
+            for workgen_volume in active_workgen_volumes:
+                volume_id = workgen_volume["id"]
 
-                        workload_generator.start()
-                # endregion
+                result_run_fio = self.performance_evaluation_instance.run_fio_test(volume_id)
 
-                time.sleep(4)
-        except Exception as err:
-            pdb.set_trace()
+                if result_run_fio == 'failed-copy-perf-eval-fio-test-file':
+                    # it might failed to detach because the volume is detached, or removed from
+                    # the 'workgen_volumes' earlier than this point
+                    if self.delete_detach_volumes_list.has_key(volume_id) is False:
+                        self.delete_detach_volumes_list[volume_id] = 1
+                    workgen_volume["active"] = False
 
-            tools.log(
-                app="work_gen",
-                type="ERROR",
-                volume_cinder_id=volume_id,
-                code="simulation_failed",
-                file_name="workload_generator.py",
-                function_name="start_simulation",
-                message="simulation ended with an exception",
-                exception=err)
+                    continue
+
+                # based on each volume creation time start storage workload generator for them
+                if tools.get_time_difference(workgen_volume["last_test_time"]) >= int(np.random.choice(
+                        self.delay_between_storage_workload_generation[0],
+                        1,
+                        p=self.delay_between_storage_workload_generation[1]
+                )):
+
+                    workload_generator = workgen_volume["generator"]
+
+                    if workload_generator is None:
+                        workload_generator = \
+                            storage_workload_gen.StorageWorkloadGenerator.create_storage_workload_generator(
+                                volume_id=volume_id,
+                                fio_test_name=self.fio_test_name,
+                                delay_between_storage_workload_generation=self.delay_between_storage_workload_generation
+                            )
+
+                        if workload_generator == 'failed-copy-fio-file':
+                            # it might failed to detach because the volume is detached, or removed from
+                            # the 'workgen_volumes' earlier than this point
+                            if self.delete_detach_volumes_list.has_key(volume_id) is False:
+                                self.delete_detach_volumes_list[volume_id] = 1
+                            workgen_volume["active"] = False
+
+                            continue
+
+                        workgen_volume["generator"] = workload_generator
+
+                    workload_generator.start()
+            # endregion
+
+            time.sleep(1)
+        # except Exception as err:
+        #
+        #     tools.log(
+        #         app="work_gen",
+        #         type="ERROR",
+        #         volume_cinder_id=volume_id,
+        #         code="simulation_failed",
+        #         file_name="workload_generator.py",
+        #         function_name="start_simulation",
+        #         message="simulation ended with an exception",
+        #         exception=err)
 
         print("\n\n***************************************** died normally")
 

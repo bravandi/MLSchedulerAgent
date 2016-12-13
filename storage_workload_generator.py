@@ -171,7 +171,7 @@ class StorageWorkloadGenerator:
                 tools.log(
                     app="W_STORAGE_GEN",
                     type="ERROR",
-                    code="run_fio",
+                    code="run_fio_stderr",
                     file_name="workload_generator.py",
                     function_name="run_workload_generator",
                     message="command: %s | stdout: %s" % (" ".join(command), out),
@@ -181,14 +181,6 @@ class StorageWorkloadGenerator:
                 tools.kill_proc(p.pid)
 
                 return
-                # time.sleep(1)
-
-                # if "file hash not empty on exit" in err:
-                #
-                #     continue
-                # else:
-                #     # break
-                #     continue
 
         except Exception as err_ex:
             tools.log(
@@ -197,7 +189,7 @@ class StorageWorkloadGenerator:
                 code="run_fio_cmd",
                 file_name="workload_generator.py",
                 function_name="run_workload_generator",
-                message="failed to run fio for storage gen. command: " + command,
+                message="failed to run fio for storage gen. command: " + " ".join(command),
                 volume_cinder_id=generator_instance.volume_id,
                 exception=err_ex)
 
