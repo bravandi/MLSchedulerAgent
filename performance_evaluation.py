@@ -109,6 +109,7 @@ class PerformanceEvaluationFIOTest:
         out = ""
         err = ""
         p = None
+        command = None
 
         try:
             command = ["sudo", "docker", "run", "-v",
@@ -156,7 +157,7 @@ class PerformanceEvaluationFIOTest:
                 code="run_perf_fio_failed",
                 file_name="performance_evaluation.py",
                 function_name="run_workload_generator",
-                message="failed to run fio for perf test. command: " + command,
+                message="failed to run fio for perf test. command: " + " ".join(command),
                 exception=err_ex
             )
 

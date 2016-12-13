@@ -89,7 +89,6 @@ class StorageWorkloadGenerator:
         try:
 
             if os.path.isfile(test_path) is False:
-
                 copyfile(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, test_path)
 
                 # with open(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, 'r') as myfile:
@@ -126,7 +125,7 @@ class StorageWorkloadGenerator:
             fio_test_name=fio_test_name,
             show_output=False,
             delay_between_storage_workload_generation=delay_between_storage_workload_generation,
-            )
+        )
 
         return generator
 
@@ -140,12 +139,9 @@ class StorageWorkloadGenerator:
         out = ""
         err = ""
         p = None
+        command = None
 
         try:
-            # command = "sudo " + StorageWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
-            # out, err, p = tools.run_command(
-            #     ["sudo", StorageWorkloadGenerator.fio_bin_path, generator_instance.test_path],
-            #     debug=False)
 
             command = ["sudo", "docker", "run", "-v",
                        generator_instance.volume_path + ":/tmp/fio-data",
@@ -209,7 +205,7 @@ class StorageWorkloadGenerator:
             duration=duration,
             read_iops=iops_measured["read"],
             write_iops=iops_measured["write"],
-            command=command,
+            command=" ".join(command),
             output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
 
         if generator_instance.show_output is False:

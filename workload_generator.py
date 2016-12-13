@@ -1017,7 +1017,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tools.save_info_logs = tools.str2bool(args.save_info_logs)
-    
+
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name=args.fio_test_name,
