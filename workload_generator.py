@@ -27,9 +27,9 @@ class CinderWorkloadGenerator:
                  request_read_iops,
                  request_write_iops,
                  wait_after_volume_rejected,
-                 performance_evaluation_instance,
                  volume_attach_time_out,
                  wait_volume_status_timeout,
+                 performance_evaluation_args,
                  workload_id=0):
         """
 
@@ -39,6 +39,14 @@ class CinderWorkloadGenerator:
         :param delay_between_storage_workload_generation:
         :return:
         """
+
+        communication.insert_tenant(
+            experiment_id=CinderWorkloadGenerator.experiment["id"],
+            description=tools.get_current_tenant_description(),
+            nova_id=tools.get_current_tenant_id()
+        )
+
+        self.performance_evaluation_args = performance_evaluation_args
 
         self.wait_after_volume_rejected = wait_after_volume_rejected
         self.request_read_iops = request_read_iops
@@ -51,7 +59,6 @@ class CinderWorkloadGenerator:
         self.max_number_volumes = max_number_volumes
         self.volume_size = volume_size
         self.volume_life_seconds = volume_life_seconds
-        self.performance_evaluation_instance = performance_evaluation_instance
         self.wait_volume_status_timeout = wait_volume_status_timeout
         self.volume_attach_time_out = volume_attach_time_out
 
@@ -82,10 +89,8 @@ class CinderWorkloadGenerator:
                 message="%s fetch server volumes failed" % tools.get_current_tenant_description(),
                 exception=err
             )
-
-            # todo DEADLOCK risk however, if upon start of the application an attached volume is left, then the simulation wont work properly
-
             time.sleep(1)
+            # todo recursive DEADLOCK risk however, if upon start of the application an attached volume is left, then the simulation wont work properly
             self.detach_delete_all_volumes()
 
             return None
@@ -196,7 +201,6 @@ class CinderWorkloadGenerator:
             return 'server-incapable-create-vol'
 
         except Exception as err:
-
 
             tools.log(
                 app="agent",
@@ -563,10 +567,9 @@ class CinderWorkloadGenerator:
             return True
 
         except cinderclient.exceptions.BadRequest as err:
-            #'Invalid volume: Volume status must be available or error or error_restoring or error_extending and must not be migrating, attached, belong to a consistency group or have snapshots. (HTTP 400) (Request-ID: req-41d22e3e-9805-4da4-b184-e27f45d8fe01)'
+            # 'Invalid volume: Volume status must be available or error or error_restoring or error_extending and must not be migrating, attached, belong to a consistency group or have snapshots. (HTTP 400) (Request-ID: req-41d22e3e-9805-4da4-b184-e27f45d8fe01)'
 
             if "Volume status must be available or error or error" in str(err) is False:
-
                 tools.log(
                     app="work_gen",
                     type="ERROR",
@@ -579,7 +582,7 @@ class CinderWorkloadGenerator:
                     message="[FROM FUNC: %s] Bad request" % debug_call_from,
                     exception=err)
 
-            # pass
+                # pass
         except Exception as err:
 
             if "No volume with a name or ID of" in str(err) or "could not be found" in str(err):
@@ -595,7 +598,7 @@ class CinderWorkloadGenerator:
 
                 return True
 
-            # try to delete later. if is_delete = 2, then means volume wont be counted in reports
+        # try to delete later. if is_delete = 2, then means volume wont be counted in reports
         if self.delete_detach_volumes_list.has_key(volume_id) is False:
             self.delete_detach_volumes_list[volume_id] = is_deleted
 
@@ -672,7 +675,6 @@ class CinderWorkloadGenerator:
         volume = self.create_volume()
 
         if volume == 'server-incapable-create-vol':
-
             return None, volume
 
         if volume is None:
@@ -724,7 +726,8 @@ class CinderWorkloadGenerator:
 
         self.detach_delete_all_volumes()
 
-        workgen_volumes = []  # "id": volume_id, "generator":, "last_test_time":, "create_time", "active":
+        # "id": volume_id, "generator":, "perf_test":,  "last_test_time":, "create_time", "active":
+        workgen_volumes = []
 
         last_rejected_create_volume_time = None
         rejection_hold_create_new_volume_request = False
@@ -736,7 +739,9 @@ class CinderWorkloadGenerator:
 
         # never use continue in this loop, there are multiple independent tasks here
         while True:
-            # region delete detach volumes list
+            print ("LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOP")
+
+            # region <<<<<<<<<<<<<<<<<<<<<DELETE DETACH MARKED VOLUMES>>>>>>>>>>>>>>>>>>>>>>>>>>>>
             for volume_id in self.delete_detach_volumes_list.keys():
 
                 find_workload_gen = [wg for wg in workgen_volumes if wg["id"] == volume_id]
@@ -744,14 +749,16 @@ class CinderWorkloadGenerator:
                 if len(find_workload_gen) == 1:
                     workload_gen = find_workload_gen[0]
 
-                if perf.PerformanceEvaluation.is_fio_running(volume_id):
-                    continue  # wait until perf-fio-test is done
-                if workload_gen is not None and \
-                                workload_gen["generator"] is not None and \
-                                workload_gen["generator"].is_alive() is True:
-                    continue  # wait until workgen-fio is done
+                if workload_gen is not None:
+                    if workload_gen["perf_test"] is not None and \
+                            workload_gen["perf_test"].is_perf_alive():
+                        continue  # wait until perf-fio-test is done
+                    if workload_gen["generator"] is not None and \
+                                    workload_gen["generator"].is_alive() is True:
+                        continue  # wait until workgen-fio is done
 
                 if self.detach_volume(cinder_volume_id=volume_id):
+
                     out, err, p = tools.run_command([
                         "sudo", "rm", "-d", "-r", CinderWorkloadGenerator.mount_path + volume_id])
 
@@ -766,6 +773,7 @@ class CinderWorkloadGenerator:
                             workgen_volumes.remove(workload_gen)
             # endregion
 
+            # region <<<<<<<<<<<<<<<<<<<HOLD for REJECTION or VOLUME GENERATION GAP>>>>>>>>>>>>>>>>
             # hold requesting new volumes if one is rejected
             if rejection_hold_create_new_volume_request is True:
                 rejection_hold_create_new_volume_request = False
@@ -786,8 +794,10 @@ class CinderWorkloadGenerator:
                 if tools.get_time_difference(last_create_volume_time) > gap:
                     #
                     workload_generate_hold_create_new_volume_request = False
+            # endregion
 
-            # region start request new volumes
+            # region <<<<<<<<<<<<<<<<<<<START MEW VOLUME REQUEST>>>>>>>>>>>>>>>>>>>>>>>>>
+
             active_workgen_volumes = [workgen_volume for workgen_volume in workgen_volumes if
                                       workgen_volume["active"] is True]
 
@@ -827,7 +837,8 @@ class CinderWorkloadGenerator:
 
                     new_workgen_volume = {
                         "id": volume_id,
-                        "generator": None,  # will create upon time to run test
+                        "generator": None,  # will create upon time to the run storage generator
+                        "perf_test": None,  # will create upon time to run performance test
                         "last_test_time": datetime.now(),
                         "create_time": volume_create_time,
                         "active": True
@@ -837,7 +848,7 @@ class CinderWorkloadGenerator:
                     active_workgen_volumes.append(new_workgen_volume)
             # endregion
 
-            # region remove expired volumes
+            # region <<<<<<<<<<<<<<<<<<<<<<<<<REMOVE EXPIRED VOLUMES>>>>>>>>>>>>>>>>>>>>>>>>>>>>
             for workgen_volume in active_workgen_volumes:
                 if tools.get_time_difference(workgen_volume["create_time"]) > \
                         int(np.random.choice(
@@ -847,28 +858,47 @@ class CinderWorkloadGenerator:
                     # terminate fio tests on the performance eval instance
                     # no need to call <workgen_volume["generator"].terminate()>, it terminates automatically
 
-                    self.performance_evaluation_instance.terminate_fio_test(workgen_volume["id"])
-
                     self.delete_detach_volumes_list[workgen_volume["id"]] = 1
                     workgen_volume["active"] = False
 
             # endregion
 
-            # region start perf evals and storage generators
+            # region <<<<<<<<<<<<<<START PERFORMANCE EVALUATIONS and STORAGE GENERATORS>>>>>>>>>>>>>>>>>>
 
             for workgen_volume in active_workgen_volumes:
                 volume_id = workgen_volume["id"]
 
-                result_run_fio = self.performance_evaluation_instance.run_fio_test(volume_id)
+                #  START START START>>> PERFORMANCE EVALUATION SECTION <<< START START START
 
-                if result_run_fio == 'failed-copy-perf-eval-fio-test-file':
-                    # it might failed to detach because the volume is detached, or removed from
-                    # the 'workgen_volumes' earlier than this point
-                    if self.delete_detach_volumes_list.has_key(volume_id) is False:
-                        self.delete_detach_volumes_list[volume_id] = 1
-                    workgen_volume["active"] = False
+                perf_test = workgen_volume["perf_test"]
 
-                    continue
+                if perf_test is None:
+                    perf_test = perf.PerformanceEvaluation(
+                        current_vm_id=tools.get_current_tenant_id(),
+                        fio_test_name=self.performance_evaluation_args["fio_test_name"],
+                        terminate_if_takes=self.performance_evaluation_args["terminate_if_takes"],
+                        restart_gap=self.performance_evaluation_args["restart_gap"],
+                        restart_gap_after_terminate=self.performance_evaluation_args[
+                            "restart_gap_after_terminate"],
+                        show_fio_output=self.performance_evaluation_args["show_fio_output"],
+                        volume_id=volume_id
+                    )
+
+                    if perf_test.initialize() == 'failed-copy-perf-eval-fio-test-file':
+
+                        # if failed to finish one time initialize then do not consider it in the reports
+                        if self.delete_detach_volumes_list.has_key(volume_id) is False:
+                            self.delete_detach_volumes_list[volume_id] = 2
+                        workgen_volume["active"] = False
+                        continue
+
+                    else:
+                        workgen_volume["perf_test"] = perf_test
+
+                result_run_fio = perf_test.run_fio_test()
+                # END END END>>> PERFORMANCE EVALUATION SECTION <<<END END END
+
+                # START START START>>> STORAGE WORKLOAD GENERATOR SECTION <<< START START START
 
                 # based on each volume creation time start storage workload generator for them
                 if tools.get_time_difference(workgen_volume["last_test_time"]) >= int(np.random.choice(
@@ -880,6 +910,7 @@ class CinderWorkloadGenerator:
                     workload_generator = workgen_volume["generator"]
 
                     if workload_generator is None:
+                        #
                         workload_generator = \
                             storage_workload_gen.StorageWorkloadGenerator.create_storage_workload_generator(
                                 volume_id=volume_id,
@@ -890,6 +921,7 @@ class CinderWorkloadGenerator:
                         if workload_generator == 'failed-copy-fio-file':
                             # it might failed to detach because the volume is detached, or removed from
                             # the 'workgen_volumes' earlier than this point
+
                             if self.delete_detach_volumes_list.has_key(volume_id) is False:
                                 self.delete_detach_volumes_list[volume_id] = 1
                             workgen_volume["active"] = False
@@ -899,6 +931,7 @@ class CinderWorkloadGenerator:
                         workgen_volume["generator"] = workload_generator
 
                     workload_generator.start()
+                    #  END END END >>> STORAGE WORKLOAD GENERATOR SECTION <<<END END END
             # endregion
 
             time.sleep(1)
@@ -990,16 +1023,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    p = perf.PerformanceEvaluation(
-        current_vm_id=tools.get_current_tenant_id(),
-
-        fio_test_name=args.perf_fio_test_name,
-        terminate_if_takes=args.perf_terminate_if_takes,
-        restart_gap=args.perf_restart_gap,
-        restart_gap_after_terminate=args.perf_restart_gap_after_terminate,
-        show_fio_output=tools.str2bool(args.perf_show_fio_output)
-    )
-
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name=args.fio_test_name,
@@ -1008,6 +1031,14 @@ if __name__ == "__main__":
         # todo make it a config
         wait_volume_status_timeout=20,
 
+        performance_evaluation_args={
+            "fio_test_name": args.perf_fio_test_name,
+            "terminate_if_takes": args.perf_terminate_if_takes,
+            "restart_gap": args.perf_restart_gap,
+            "restart_gap_after_terminate": args.perf_restart_gap_after_terminate,
+            "show_fio_output": tools.str2bool(args.perf_show_fio_output)
+        },
+
         wait_after_volume_rejected=json.loads(args.wait_after_volume_rejected),
         request_read_iops=json.loads(args.request_read_iops),
         request_write_iops=json.loads(args.request_write_iops),
@@ -1015,8 +1046,7 @@ if __name__ == "__main__":
         delay_between_create_volume_generation=json.loads(args.delay_between_create_volume_generation),
         max_number_volumes=json.loads(args.max_number_volumes),
         volume_life_seconds=json.loads(args.volume_life_seconds),
-        volume_size=json.loads(args.volume_size),
-        performance_evaluation_instance=p
+        volume_size=json.loads(args.volume_size)
     )
 
     if "det-del" in args.commands:

@@ -107,6 +107,10 @@ function c_attachedVolumes(){
 	sudo df | grep vd
 }
 
+function c_dockerHellowWorld(){
+    sudo docker run --rm hello-world
+}
+
 function c_debugClient(){
 
     # this is not working it can not find pudb.run maybe because its not registered with venv ?
@@ -131,7 +135,7 @@ function c_debugClient(){
 
 }
 
-sudo systemctl start docker
+#sudo systemctl start docker
 
 sudo timedatectl set-timezone America/New_York
 #cd /root/cinder/

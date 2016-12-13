@@ -107,7 +107,7 @@ class StorageWorkloadGenerator:
             tools.log(
                 app="work_gen",
                 type="ERROR",
-                code="failed_copy_fio_file",
+                code="failed_copy_wgen_fio_file",
                 file_name="storage_workload_generator.py",
                 function_name="run_storage_workload_generator",
                 message="could not copy the fio test file for workload generator",
@@ -137,23 +137,9 @@ class StorageWorkloadGenerator:
 
         start_time = datetime.now()
 
-        command = StorageWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
-
-        # tools.log(
-        #     app="W_STORAGE_GEN",
-        #     type="INFO",
-        #     code="wgen_run_f_test",
-        #     file_name="workload_generator.py",
-        #     function_name="run_workload_generator",
-        #     message="Time: %s \ncommand: %s" %
-        #             (str(start_time), command),
-        #     volume_cinder_id=generator_instance.volume_id,
-        #     insert_db=False)
-
         out = ""
         err = ""
         p = None
-        command = ""
 
         try:
             # command = "sudo " + StorageWorkloadGenerator.fio_bin_path + " " + generator_instance.test_path
@@ -164,6 +150,17 @@ class StorageWorkloadGenerator:
             command = ["sudo", "docker", "run", "-v",
                        generator_instance.volume_path + ":/tmp/fio-data",
                        "-e", "JOBFILES=" + generator_instance.fio_test_name, "clusterhq/fio-tool"]
+
+            tools.log(
+                app="W_STORAGE_GEN",
+                type="INFO",
+                code="wgen_run_gen_fio",
+                file_name="workload_generator.py",
+                function_name="run_workload_generator",
+                message="Time: %s \ncommand: %s" % (str(start_time), " ".join(command)),
+                volume_cinder_id=generator_instance.volume_id
+                # ,insert_db=False
+            )
 
             out, err, p = tools.run_command(command, debug=False)
 
@@ -179,7 +176,8 @@ class StorageWorkloadGenerator:
                     exception=err)
 
                 # tools.kill_proc(p.pid)
-                tools.run_command2("sudo systemctl start docker")
+                if "Cannot connect to the Docker daemon" in err:
+                    tools.run_command2("sudo systemctl start docker")
 
                 return
 
@@ -195,7 +193,8 @@ class StorageWorkloadGenerator:
                 exception=err_ex)
 
             # tools.kill_proc(p.pid)
-            tools.run_command2("sudo systemctl start docker")
+            if "Cannot connect to the Docker daemon" in str(err_ex):
+                tools.run_command2("sudo systemctl start docker")
 
             return
 
@@ -219,7 +218,7 @@ class StorageWorkloadGenerator:
         tools.log(
             app="W_STORAGE_GEN",
             type="INFO",
-            code="wgen_iops_m",
+            code="iops_wgen",
             file_name="workload_generator.py",
             function_name="run_workload_generator",
             message=" DURATION: %s read: %s write: %s\n OUTPUT_STD:%s\n ERROR_STD: %s" %
