@@ -487,12 +487,28 @@ def get_mounted_devices(match="vd", debug=False):
     return result
 
 
-def get_attached_devices(match="vd", debug=False):
+def get_attached_devices(match="vd", debug=False, volume_id_for_log=''):
     result = set()
 
     out, err, p = run_command(["sudo", "fdisk", "-l"], debug=debug)
 
     t = grep(out, match)
+
+    if err != '':
+        log(
+            app="MAIN_WORKGEN",
+            type="ERROR",
+            code="fdisk_stderr",
+            file_name="tools.py",
+            function_name="get_attached_devices",
+            message="stderr for fdisk -l ",
+            exception=err,
+            volume_cinder_id=volume_id_for_log
+        )
+
+        if "Input/output error" in err:
+
+            raise Exception("MAYBE need delete the VM, fdisk stderr: " + err)
 
     for i in t:
 

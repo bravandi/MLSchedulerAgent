@@ -265,7 +265,7 @@ class CinderWorkloadGenerator:
             type="INFO",
             file_name="workload_generator.py",
             function_name="attach_volume",
-            message="attach_volume instance_id=%s volume_id=%s" % (instance_id, volume_id),
+            message="Going to attach volume instance_id=%s volume_id=%s" % (instance_id, volume_id),
             volume_cinder_id=volume_id,
             insert_db=False)
 
@@ -306,8 +306,9 @@ class CinderWorkloadGenerator:
         already_attached_devices = set()
 
         try:
-            already_attached_devices = tools.get_attached_devices()
+            already_attached_devices = tools.get_attached_devices(volume_id_for_log=volume.id)
         except Exception as err:
+            pdb.set_trace()
             tools.log(
                 app="MAIN_WORKGEN",
                 type="ERROR",
@@ -325,8 +326,9 @@ class CinderWorkloadGenerator:
         # make sure the device is ready to be mounted, if takes more than XX seconds drop it
         while tools.get_time_difference(start_time) < self.volume_attach_time_out:
             try:
-                new_device = tools.get_attached_devices() - already_attached_devices
+                new_device = tools.get_attached_devices(volume_id_for_log=volume.id) - already_attached_devices
             except Exception as err:
+                pdb.set_trace()
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
@@ -343,6 +345,7 @@ class CinderWorkloadGenerator:
 
             if len(new_device) > 0:
                 if len(new_device) > 1:
+                    pdb.set_trace()
                     tools.log(
                         app="MAIN_WORKGEN",
                         type="ERROR",
@@ -359,6 +362,7 @@ class CinderWorkloadGenerator:
                 break
 
         if device.strip() == '' or device is None:
+            pdb.set_trace()
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
@@ -376,7 +380,7 @@ class CinderWorkloadGenerator:
             type="INFO",
             file_name="workload_generator.py",
             function_name="mount_volume",
-            message="try to mount_volume device: %s" % device,
+            message="Attempting to mount_volume device: %s" % device,
             volume_cinder_id=volume.id,
             insert_db=False)
 
@@ -387,6 +391,7 @@ class CinderWorkloadGenerator:
             c1 = ["sudo", 'mkfs', '-t', "ext3", device]
             out, err, p = tools.run_command(c1, debug=True)
             if "in use by the system" in err:
+                pdb.set_trace()
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
@@ -400,6 +405,7 @@ class CinderWorkloadGenerator:
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
         except Exception as err:
+            pdb.set_trace()
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
@@ -419,6 +425,7 @@ class CinderWorkloadGenerator:
             out, err, p = tools.run_command(c2, debug=True)
 
             if err != "":
+                pdb.set_trace()
                 tools.log(
                     app="MAIN_WORKGEN",
                     volume_cinder_id=volume.id,
@@ -432,6 +439,7 @@ class CinderWorkloadGenerator:
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
         except Exception as err:
+            pdb.set_trace()
             tools.log(
                 app="MAIN_WORKGEN",
                 type="ERROR",
@@ -449,6 +457,7 @@ class CinderWorkloadGenerator:
             out, err, p = tools.run_command(c3, debug=True)
 
             if err != "":
+                pdb.set_trace()
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
@@ -462,6 +471,7 @@ class CinderWorkloadGenerator:
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
         except Exception as err:
+            pdb.set_trace()
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
@@ -481,7 +491,7 @@ class CinderWorkloadGenerator:
             code="mount_done",
             file_name="workload_generator.py",
             function_name="mount_volume",
-            message="mount done. "  # + log
+            message="mount done. device: " + device
         )
 
         return True
@@ -715,14 +725,14 @@ class CinderWorkloadGenerator:
                 message="going to mount volume",
                 volume_cinder_id=volume.id
             )
-
+            pdb.set_trace()
             mount_result = self.mount_volume(
                 # device_from_openstack: pass null if you want to find it using the 'df' and 'fdisk' commands.
                 device_from_openstack=None,  # attach_result.device,
                 volume=volume)
 
             if mount_result is False:
-                return volume.id, "mount-failed"
+                return volume.id, "mount-failed-2"
         else:
             return volume.id, "attach-failed"
 
@@ -852,7 +862,7 @@ class CinderWorkloadGenerator:
                     last_rejected_create_volume_time = datetime.now()
                     rejection_hold_create_new_volume_request = True
 
-                elif result == "mount-failed" or result == "attach-failed":
+                elif result == "mount-failed-2" or result == "attach-failed":
 
                     self.delete_detach_volumes_list[volume_id] = 2
 
@@ -1054,10 +1064,8 @@ if __name__ == "__main__":
     wg = CinderWorkloadGenerator(
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name=args.fio_test_name,
-        # todo make it a config
-        volume_attach_time_out=25,
-        # todo make it a config
-        wait_volume_status_timeout=15,
+        volume_attach_time_out=communication.Communication.get_config("volume_attach_time_out"),
+        wait_volume_status_timeout=communication.Communication.get_config("wait_volume_status_timeout"),
 
         performance_evaluation_args={
             "fio_test_name": args.perf_fio_test_name,

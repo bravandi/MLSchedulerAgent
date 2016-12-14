@@ -28,6 +28,11 @@ class Communication:
 
         return Communication._current_experiment
 
+    @staticmethod
+    def get_config(key):
+
+        return Communication.get_current_experiment()["config"][key]
+
 
 def volume_performance_meter_clock_calc(t=datetime.now()):
     return None
