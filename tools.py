@@ -264,12 +264,12 @@ def cinder_wait_for_volume_status(volume_id, status, timeout):
             vol_reload = cinder.volumes.get(volume_id)
 
             if "error" in vol_reload.status.lower():
-                return False
+                return False, "vol-status-error"
 
             if vol_reload.status == status:
-                return True
+                return True, "successful"
 
-            time.sleep(0.2)
+            time.sleep(0.3)
         except Exception as err:
             log(
                 app="agent",
@@ -282,10 +282,9 @@ def cinder_wait_for_volume_status(volume_id, status, timeout):
                 exception=err
             )
 
-            time.sleep(0.4)
+            return False, 'exception'
 
-    return False
-
+    return False, "timeout"
 
 # _c_client = None
 

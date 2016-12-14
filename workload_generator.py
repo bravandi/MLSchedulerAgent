@@ -227,19 +227,34 @@ class CinderWorkloadGenerator:
         """
 
         # wait until the volume is ready
-        if tools.cinder_wait_for_volume_status(
-                volume_id,
-                status="available",
-                timeout=self.wait_volume_status_timeout) is False:
+
+        is_status_available, message = tools.cinder_wait_for_volume_status(
+            volume_id,
+            status="available",
+            timeout=self.wait_volume_status_timeout)
+
+        if is_status_available is False:
             #
+            log_code = ""
+            log_msg = ""
+
+            if message == "vol-status-error":
+                log_code = "rejected_OR_unknown_reason"
+                log_msg = "Reason: Assume volume is rejected. " \
+                          "'error' status could cause by rejecting the volume in the scheduler OR " \
+                          "OpenStack internal exceptions. I cannot distinguish between them (error, error creating ...)"
+
+            if message == "timeout":
+                log_code = "timeout_vol_status_wait"
+                log_msg = "timeout, wait for status 'available'. waited for > " + str(self.wait_volume_status_timeout)
 
             tools.log(
                 app="MAIN_WORKGEN",
                 type="WARNING",
-                code="rejected|vol_status_error",
+                code=log_code,
                 file_name="workload_generator.py",
                 function_name="attach_volume",
-                message="Reason: Assume volume is rejected. Cannot distinguish rejection or another reason for having error status. VOLUME DELETED because status is 'error'",
+                message=log_msg,
                 volume_cinder_id=volume_id,
             )
 
@@ -819,7 +834,9 @@ class CinderWorkloadGenerator:
                 volume_id, result = self.create_attach_mount_volume()
 
                 if result == 'server-incapable-create-vol':
-                    raise Exception("server-incapable-create-vol")
+                    # TODO need to investigate how to mitigate this problem
+                    # raise Exception("server-incapable-create-vol")
+                    pass
 
                 tools.log(
                     app="MAIN_WORKGEN",
@@ -1038,9 +1055,9 @@ if __name__ == "__main__":
         current_vm_id=tools.get_current_tenant_id(),
         fio_test_name=args.fio_test_name,
         # todo make it a config
-        volume_attach_time_out=18,
+        volume_attach_time_out=25,
         # todo make it a config
-        wait_volume_status_timeout=20,
+        wait_volume_status_timeout=15,
 
         performance_evaluation_args={
             "fio_test_name": args.perf_fio_test_name,
