@@ -21,4 +21,4 @@ readwrite=read
 
 #rwmixread=75
 
-[workload_generator]
+[sequential_read]

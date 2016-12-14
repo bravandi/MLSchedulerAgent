@@ -1,0 +1,25 @@
+@TFindelkind Raw Peak Performance 
+
+- Run a fio-secure-erase in advance. 
+- Format the device with 4k block size if possible.
+- Check: http://tfindelkind.com/wp-content/uploads/2015/08/ioMemory_VSL_Peak_Performance_Guide_2014-08-121.pdf1
+- Use fio-status to find the right device.  
+  Example:  /dev/fct0 = /dev/fioa
+
+USAGE:
+DISK=/dev/fioa fio fio-job-10.ini
+
+Official:
+fio-job-01 = fio random 512 write LATENCY
+fio-job-02 = fio random 512 write peak IOPS
+fio-job-03 = fio sequential 512 write peak IOPS
+fio-job-04 = fio random 1M write peak BW
+fio-job-05 = fio PRECONDITION sequential 1M complete write
+fio-job-06 = fio random 512 read LATENCY
+fio-job-07 = fio random 512 read peak IOPS
+fio-job-08 = fio sequential 512 read peak IOPS
+fio-job-09 = fio random 1M read peak BW
+
+@tfindelkind part:
+fio-job-010 = fio random 4K read peak IOPS  
+fio-job-011 = fio random 4K write peak IOPS

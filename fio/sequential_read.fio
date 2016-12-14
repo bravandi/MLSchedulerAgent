@@ -1,0 +1,11 @@
+#http://tfindelkind.com/2015/08/17/fio-flexible-io-tester-part6-sequential-read-and-readahead/
+[global]
+randrepeat=1
+ioengine=libaio
+direct=1
+gtod_reduce=1
+bs=4k
+size=128m
+readwrite=read
+
+[sequential_read]

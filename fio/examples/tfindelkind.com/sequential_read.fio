@@ -1,0 +1,7 @@
+[readahead]
+rw=read
+ioengine=sync
+direct=0
+invalidate=1
+size=100MB
+#filename=/840/testfile1 ; This is Samsung EVO 840 with ext4 defaults
