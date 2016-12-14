@@ -6,6 +6,8 @@ randrepeat=1
 ioengine=libaio
 
 direct=1
+
+# Enable all of the gettimeofday() reducing options (disable_clat, disable_slat, disable_bw) plus reduce precision of the timeout somewhat to really shrink the gettimeofday() call count. With this option enabled, we only do about 0.4% of the gtod() calls we would have done if all time keeping was enabled.
 gtod_reduce=1
 
 #name=test

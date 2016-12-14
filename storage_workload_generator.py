@@ -89,6 +89,7 @@ class StorageWorkloadGenerator:
         try:
 
             if os.path.isfile(test_path) is False:
+
                 copyfile(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, test_path)
 
                 # with open(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, 'r') as myfile:

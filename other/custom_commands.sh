@@ -106,7 +106,7 @@ function c_attachedVolumes(){
 	sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 	sudo df |& grep vd
     sudo echo "@@@@@@@@@ERROR:"
-	sudo fdisk -l | grep error
+	sudo fdisk -l |& grep error
 }
 
 function c_dockerHellowWorld(){
