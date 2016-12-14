@@ -287,29 +287,29 @@ def cinder_wait_for_volume_status(volume_id, status, timeout):
     return False
 
 
-_c_client = None
+# _c_client = None
 
 
 def get_cinder_client():
-    if _c_client is None:
-        return c_client.Client(2, session=get_session())
+    # if _c_client is None:
+    return c_client.Client(2, session=get_session())
 
-    return _c_client
+    # return _c_client
 
 
-_c_client = get_cinder_client()
+# _c_client = get_cinder_client()
 
-c_nova_client = None
+# c_nova_client = None
 
 
 def get_nova_client():
-    if c_nova_client is None:
-        return n_client.Client(2, session=get_session())
+    # if c_nova_client is None:
+    return n_client.Client(2, session=get_session())
 
-    return c_nova_client
+    # return c_nova_client
 
 
-c_nova_client = get_nova_client()
+# c_nova_client = get_nova_client()
 
 
 def create_sequential_folder(path, folder_name):
