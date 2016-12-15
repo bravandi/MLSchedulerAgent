@@ -488,7 +488,7 @@ def get_mounted_devices(match="vd", debug=False):
 
 
 def get_attached_devices(match="vd", debug=False, volume_id_for_log=''):
-    pdb.set_trace()
+
     result = set()
 
     out, err, p = run_command(["sudo", "fdisk", "-l"], debug=debug)
