@@ -488,6 +488,7 @@ def get_mounted_devices(match="vd", debug=False):
 
 
 def get_attached_devices(match="vd", debug=False, volume_id_for_log=''):
+    pdb.set_trace()
     result = set()
 
     out, err, p = run_command(["sudo", "fdisk", "-l"], debug=debug)
@@ -506,9 +507,10 @@ def get_attached_devices(match="vd", debug=False, volume_id_for_log=''):
             volume_cinder_id=volume_id_for_log
         )
 
-        if "Input/output error" in err:
+        if "input/output error" in str(err).lower():
+            return None, "fdisk-input-output-error"
 
-            raise Exception("MAYBE need delete the VM, fdisk stderr: " + err)
+        return None, 'failed'
 
     for i in t:
 
@@ -518,7 +520,7 @@ def get_attached_devices(match="vd", debug=False, volume_id_for_log=''):
         if tmp != '':
             result.add(tmp[:len(tmp) - 1])
 
-    return result
+    return result, "successful"
 
 
 save_info_logs = True

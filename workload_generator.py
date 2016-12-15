@@ -228,6 +228,11 @@ class CinderWorkloadGenerator:
 
         # wait until the volume is ready
 
+        check_input_output_err_not_happening, msg = tools.get_attached_devices(volume_id_for_log=volume_id)
+
+        if msg == "fdisk-input-output-error":
+            raise Exception("Err in executing fdisk -l Input/output. MAYBE need delete the VM")
+
         is_status_available, message = tools.cinder_wait_for_volume_status(
             volume_id,
             status="available",
@@ -304,11 +309,16 @@ class CinderWorkloadGenerator:
         # underlying attachment process. Therefore must detach and remove the volume.
         device = ''
         already_attached_devices = set()
+        msg = ''
 
         try:
-            already_attached_devices = tools.get_attached_devices(volume_id_for_log=volume.id)
+            already_attached_devices, msg = tools.get_attached_devices(volume_id_for_log=volume.id)
+
+            if msg != 'successful':
+                return False
+
         except Exception as err:
-            
+
             tools.log(
                 app="MAIN_WORKGEN",
                 type="ERROR",
@@ -326,9 +336,13 @@ class CinderWorkloadGenerator:
         # make sure the device is ready to be mounted, if takes more than XX seconds drop it
         while tools.get_time_difference(start_time) < self.volume_attach_time_out:
             try:
-                new_device = tools.get_attached_devices(volume_id_for_log=volume.id) - already_attached_devices
+                new_device, msg = tools.get_attached_devices(volume_id_for_log=volume.id) - already_attached_devices
+
+                if msg != 'successful':
+                    return False
+
             except Exception as err:
-                
+
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
@@ -345,7 +359,6 @@ class CinderWorkloadGenerator:
 
             if len(new_device) > 0:
                 if len(new_device) > 1:
-                    
                     tools.log(
                         app="MAIN_WORKGEN",
                         type="ERROR",
@@ -362,7 +375,6 @@ class CinderWorkloadGenerator:
                 break
 
         if device.strip() == '' or device is None:
-            
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
@@ -391,7 +403,6 @@ class CinderWorkloadGenerator:
             c1 = ["sudo", 'mkfs', '-t', "ext3", device]
             out, err, p = tools.run_command(c1, debug=True)
             if "in use by the system" in err:
-                
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
@@ -405,7 +416,7 @@ class CinderWorkloadGenerator:
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c1, out, err)
         except Exception as err:
-            
+
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
@@ -425,7 +436,6 @@ class CinderWorkloadGenerator:
             out, err, p = tools.run_command(c2, debug=True)
 
             if err != "":
-                
                 tools.log(
                     app="MAIN_WORKGEN",
                     volume_cinder_id=volume.id,
@@ -439,7 +449,7 @@ class CinderWorkloadGenerator:
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c2, out, err)
         except Exception as err:
-            
+
             tools.log(
                 app="MAIN_WORKGEN",
                 type="ERROR",
@@ -457,7 +467,6 @@ class CinderWorkloadGenerator:
             out, err, p = tools.run_command(c3, debug=True)
 
             if err != "":
-                
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
@@ -471,7 +480,7 @@ class CinderWorkloadGenerator:
                 return False
                 # log = "%s %s out-->%s err-->%s  \n" % (log, c3, out, err)
         except Exception as err:
-            
+
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
@@ -725,7 +734,7 @@ class CinderWorkloadGenerator:
                 message="going to mount volume",
                 volume_cinder_id=volume.id
             )
-            
+
             mount_result = self.mount_volume(
                 # device_from_openstack: pass null if you want to find it using the 'df' and 'fdisk' commands.
                 device_from_openstack=None,  # attach_result.device,
