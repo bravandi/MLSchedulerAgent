@@ -109,8 +109,12 @@ function c_attachedVolumes(){
 	sudo fdisk -l |& grep error
 }
 
-function c_dockerHellowWorld(){
+function c_testDockerHellowWorld(){
     sudo docker run --rm hello-world
+}
+
+function c_startDocker(){
+    sudo systemctl start docker
 }
 
 function c_detDelVols(){

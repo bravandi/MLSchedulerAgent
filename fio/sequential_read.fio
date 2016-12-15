@@ -1,4 +1,3 @@
-#http://tfindelkind.com/2015/08/17/fio-flexible-io-tester-part6-sequential-read-and-readahead/
 [global]
 randrepeat=1
 ioengine=libaio

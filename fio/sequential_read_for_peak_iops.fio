@@ -1,6 +1,4 @@
 [global]
-bs=4k
-
 readwrite=randrw
 rwmixread=100
 blocksize=512
@@ -19,7 +17,7 @@ time_based=1
 runtime=30
 randrepeat=0
 
-[fio-job-08]
+[sequential_read_for_peak_iops]
 
 cpus_allowed=1
 size=128m
