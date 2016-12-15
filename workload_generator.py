@@ -322,7 +322,7 @@ class CinderWorkloadGenerator:
             tools.log(
                 app="MAIN_WORKGEN",
                 type="ERROR",
-                code="get_attached_devices",
+                code="get_already_attch_devs_failed",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
                 message="failed to get already_attached_devices. must try again but for now return false",
@@ -336,7 +336,9 @@ class CinderWorkloadGenerator:
         # make sure the device is ready to be mounted, if takes more than XX seconds drop it
         while tools.get_time_difference(start_time) < self.volume_attach_time_out:
             try:
-                new_device, msg = tools.get_attached_devices(volume_id_for_log=volume.id) - already_attached_devices
+
+                current_attached_devices, msg = tools.get_attached_devices(volume_id_for_log=volume.id)
+                new_device = current_attached_devices - already_attached_devices
 
                 if msg != 'successful':
                     return False
@@ -346,7 +348,7 @@ class CinderWorkloadGenerator:
                 tools.log(
                     app="MAIN_WORKGEN",
                     type="ERROR",
-                    code="get_attached_devices",
+                    code="get_current_attch_devs_failed",
                     file_name="workload_generator.py",
                     function_name="mount_volume",
                     message="failed to get attached devices. will retry in the while true loop.",
