@@ -15,7 +15,11 @@ class Communication:
         if Communication._current_experiment is not None:
             return Communication._current_experiment
 
-        ex = requests.get(Communication.__server_url + "get_current_experiment")
+        try:
+            ex = requests.get(Communication.__server_url + "get_current_experiment")
+        except Exception as err:
+            raise Exception(
+                "\n\nException Message -->%s\n\nCannot connect to the MLAgent Service provider. " % str(err))
 
         try:
             ex = json.loads(ex.text)
@@ -37,9 +41,10 @@ class Communication:
 def volume_performance_meter_clock_calc(t=datetime.now()):
     return None
 
+
 try:
     # define the function from the database
-    exec(Communication.get_current_experiment()["config"]["volume_performance_meter_clock_calc"])
+    exec (Communication.get_current_experiment()["config"]["volume_performance_meter_clock_calc"])
 except:
     print("Error an executing the experiment VOLUME_PERFORMANCE_METER calculate clock function.")
     # sys.exit(1)
@@ -48,12 +53,24 @@ except:
 def volume_clock_calc(t):
     return t.strftime("%s")
 
+
 try:
     # define the function from the database
-    exec(Communication.get_current_experiment()["config"]["volume_clock_calc"])
+    exec (Communication.get_current_experiment()["config"]["volume_clock_calc"])
 except:
     print("Error an executing the experiment VOLUME calculate clock function.")
     # sys.exit(1)
+
+
+def http_post_request(path, data):
+    try:
+        response = requests.post(__server_url + path, data=data)
+    except Exception as err:
+
+        return "connection-error"
+
+    return _parse_response(response)
+
 
 def insert_volume_request(
         capacity,
@@ -64,10 +81,8 @@ def insert_volume_request(
         workload_id=0,
         create_clock=0,
         create_time=None):
-
     if create_time is None:
         create_time = datetime.now()
-
 
     data = {
         "workload_id": workload_id,
@@ -80,7 +95,7 @@ def insert_volume_request(
         "create_time": create_time
     }
 
-    return _parse_response(requests.post(__server_url + "insert_volume_request", data=data))
+    return http_post_request("insert_volume_request", data)
 
 
 def insert_volume_performance_meter(
@@ -144,7 +159,8 @@ def insert_volume_performance_meter(
         "create_time": create_time
     }
 
-    return _parse_response(requests.post(__server_url + "insert_volume_performance_meter", data=data))
+    # return _parse_response(requests.post(__server_url + "insert_volume_performance_meter", data=data))
+    http_post_request("insert_volume_performance_meter", data=data)
 
 
 def insert_log(
@@ -174,7 +190,8 @@ def insert_log(
         "create_time": create_time
     }
 
-    return _parse_response(requests.post(__server_url + "insert_log", data=data))
+    # return _parse_response(requests.post(__server_url + "insert_log", data=data))
+    http_post_request("insert_log", data=data)
 
 
 def delete_volume(
@@ -208,7 +225,8 @@ def delete_volume(
         "delete_time": delete_time
     }
 
-    return _parse_response(requests.post(__server_url + "delete_volume", data=data))
+    # return _parse_response(requests.post(__server_url + "delete_volume", data=data))
+    http_post_request("delete_volume", data=data)
 
 
 def insert_workload_generator(
@@ -223,7 +241,6 @@ def insert_workload_generator(
         nova_id=None,
         create_clock=0,
         create_time=None):
-
     if create_time is None:
         create_time = datetime.now()
 
@@ -241,7 +258,8 @@ def insert_workload_generator(
         "create_time": create_time
     }
 
-    return _parse_response(requests.post(__server_url + "insert_workload_generator", data=data))
+    # return _parse_response(requests.post(__server_url + "insert_workload_generator", data=data))
+    http_post_request("insert_workload_generator", data=data)
 
 
 def insert_tenant(
@@ -249,7 +267,6 @@ def insert_tenant(
         nova_id,
         description,
         create_time=None):
-
     if create_time is None:
         create_time = datetime.now()
 
@@ -260,11 +277,11 @@ def insert_tenant(
         "create_time": create_time
     }
 
-    return _parse_response(requests.post(__server_url + "insert_tenant", data=data))
+    # return _parse_response(requests.post(__server_url + "insert_tenant", data=data))
+    http_post_request("insert_tenant", data=data)
 
 
 def _parse_response(response):
-
     try:
         return int(response.content)
     except ValueError:

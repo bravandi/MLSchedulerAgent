@@ -40,11 +40,14 @@ class CinderWorkloadGenerator:
         :return:
         """
 
-        communication.insert_tenant(
+        communication_result = communication.insert_tenant(
             experiment_id=CinderWorkloadGenerator.experiment["id"],
             description=tools.get_current_tenant_description(),
             nova_id=tools.get_current_tenant_id()
         )
+
+        if communication_result == "connection-error":
+            raise Exception("Cannot start agent at this point. The Service Handler is not available and caannot register this tenant.")
 
         self.performance_evaluation_args = performance_evaluation_args
 
@@ -175,6 +178,17 @@ class CinderWorkloadGenerator:
             read_iops=read_iops,
             write_iops=write_iops
         )
+
+        if db_id == "connection-error":
+            tools.log(
+                app="PERF_EVAL",
+                type="ERROR",
+                code="ml_service_unavailable",
+                file_name="workload_generator.py",
+                function_name="create_volume",
+                message="service handler is not available")
+
+            return 'connection-error'
 
         cinder = tools.get_cinder_client()
 
@@ -600,9 +614,10 @@ class CinderWorkloadGenerator:
 
             cinder.volumes.delete(volume_id)
 
-            communication.delete_volume(
+            if communication.delete_volume(
                 cinder_id=volume_id,
-                is_deleted=is_deleted)
+                is_deleted=is_deleted) == "connection-error":
+                return False
 
             return True
 
@@ -718,6 +733,9 @@ class CinderWorkloadGenerator:
         volume = self.create_volume()
 
         if volume == 'server-incapable-create-vol':
+            return None, volume
+
+        if volume == "connection-error":
             return None, volume
 
         if volume is None:

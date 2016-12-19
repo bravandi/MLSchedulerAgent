@@ -146,7 +146,7 @@ class PerformanceEvaluationFIOTest:
                 if "Cannot connect to the Docker daemon" in err:
                     tools.run_command2("sudo systemctl start docker")
 
-                return
+                return 'failed'
 
         except Exception as err_ex:
 
@@ -165,7 +165,7 @@ class PerformanceEvaluationFIOTest:
             if "Cannot connect to the Docker daemon" in str(err_ex):
                 tools.run_command2("sudo systemctl start docker")
 
-            return
+            return 'failed'
 
         iops_measured = tools.get_iops_measures_from_fio_output(out)
 
@@ -173,7 +173,7 @@ class PerformanceEvaluationFIOTest:
         last_end_time.value = str(datetime.now())
         duration = round(tools.get_time_difference(last_start_time.value, last_end_time.value), 2)
 
-        communication.insert_volume_performance_meter(
+        communication_result = communication.insert_volume_performance_meter(
             experiment_id=PerformanceEvaluation.experiment["id"],
             sla_violation_id=1,  # 1 means no violation
             nova_id=tools.get_current_tenant_id(),
@@ -182,6 +182,18 @@ class PerformanceEvaluationFIOTest:
             write_iops=iops_measured["write"],
             duration=float(duration),
             io_test_output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
+
+        if communication_result == "connection-error":
+            tools.log(
+                app="PERF_EVAL",
+                type="ERROR",
+                volume_cinder_id=test_instance.cinder_volume_id,
+                code="ml_service_unavailable",
+                file_name="performance_evaluation.py",
+                function_name="run_f_test",
+                message="service handler is not available")
+
+            return 'failed'
 
         if test_instance.show_output is False:
             out = "SHOW_OUTPUT = False"
@@ -197,6 +209,8 @@ class PerformanceEvaluationFIOTest:
                     (str(duration), iops_measured["read"], iops_measured["write"], out, err)
             # ,insert_db=False
         )
+
+        return "successful"
 
 
 class PerformanceEvaluation:
@@ -275,7 +289,7 @@ class PerformanceEvaluation:
                 self.f_test.terminate_ftest(after_seconds=difference, time_out=True)
 
                 # record termination in database
-                communication.insert_volume_performance_meter(
+                communication_result = communication.insert_volume_performance_meter(
                     experiment_id=PerformanceEvaluation.experiment["id"],
                     nova_id=tools.get_current_tenant_id(),
                     cinder_volume_id=self.volume_id,
@@ -284,6 +298,18 @@ class PerformanceEvaluation:
                     duration=0,
                     terminate_wait=float(difference),
                     io_test_output="TERMINATED [terminate_if_takes: %s]" % str(self.terminate_if_takes))
+
+                if communication_result == "connection-error":
+                    tools.log(
+                        app="PERF_EVAL",
+                        type="ERROR",
+                        volume_cinder_id=self.volume_id,
+                        code="ml_service_unavailable",
+                        file_name="performance_evaluation.py",
+                        function_name="run_fio_test",
+                        message="service handler is not available")
+
+                    return "connection-error"
 
                 return "time-out"
 

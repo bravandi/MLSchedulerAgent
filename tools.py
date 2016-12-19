@@ -564,7 +564,7 @@ def log(message,
     if type.lower() == "info" and save_info_logs is False:
         return msg
 
-    communication.insert_log(
+    communication_result = communication.insert_log(
         experiment_id=experiment_id,
         volume_cinder_id=volume_cinder_id,
         app=app,
@@ -575,6 +575,10 @@ def log(message,
         message=message,
         exception_message=exception
     )
+
+    if communication_result == "connection-error":
+        print '\n\n***********LOG FAILED CONNECTION-ERROR with the service provider*************'
+        return "LOG FAILED CONNECTION-ERROR with the service provider. \n" + msg
 
     return msg
 

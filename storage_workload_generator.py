@@ -176,7 +176,7 @@ class StorageWorkloadGenerator:
                 if "Cannot connect to the Docker daemon" in err:
                     tools.run_command2("sudo systemctl start docker")
 
-                return
+                return 'failed'
 
         except Exception as err_ex:
             tools.log(
@@ -193,13 +193,13 @@ class StorageWorkloadGenerator:
             if "Cannot connect to the Docker daemon" in str(err_ex):
                 tools.run_command2("sudo systemctl start docker")
 
-            return
+            return 'failed'
 
         duration = round(tools.get_time_difference(start_time), 2)
 
         iops_measured = tools.get_iops_measures_from_fio_output(out)
 
-        communication.insert_workload_generator(
+        communication_result = communication.insert_workload_generator(
             experiment_id=communication.Communication.get_current_experiment()["id"],
             cinder_id=generator_instance.volume_id,
             nova_id=tools.get_current_tenant_id(),
@@ -208,6 +208,18 @@ class StorageWorkloadGenerator:
             write_iops=iops_measured["write"],
             command=" ".join(command),
             output="OUTPUT_STD:%s\n ERROR_STD: %s" % (out, err))
+
+        if communication_result == "connection-error":
+            tools.log(
+                app="PERF_EVAL",
+                type="ERROR",
+                volume_cinder_id=generator_instance.volume_id,
+                code="ml_service_unavailable",
+                file_name="workload_generator.py",
+                function_name="run_workload_generator",
+                message="service handler is not available")
+
+            return 'failed'
 
         if generator_instance.show_output is False:
             out = "SHOW_OUTPUT = False"
@@ -229,3 +241,5 @@ class StorageWorkloadGenerator:
             volume_cinder_id=generator_instance.volume_id
             # ,insert_db=False
         )
+
+        return 'successful'
