@@ -112,6 +112,9 @@ class PerformanceEvaluationFIOTest:
         command = None
 
         try:
+            out, err, p = tools.run_command(
+                ["sudo", "rm", test_instance.volume_path + "for_resource_evaluation*"], debug=False)
+
             command = ["sudo", "docker", "run", "-v",
                        test_instance.volume_path + ":/tmp/fio-data",
                        "-e", "JOBFILES=" + test_instance.test_name, "clusterhq/fio-tool"]

@@ -145,7 +145,12 @@ function c_debugClient(){
 
 }
 
-#sudo systemctl start docker
+function c_dockerRestart(){
+    sudo systemctl stop docker
+    sudo systemctl start docker
+}
+
+#sudo systemctl restart docker
 
 sudo timedatectl set-timezone America/New_York
 #cd /root/cinder/

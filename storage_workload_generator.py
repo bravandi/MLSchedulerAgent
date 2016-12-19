@@ -144,6 +144,9 @@ class StorageWorkloadGenerator:
 
         try:
 
+            out, err, p = tools.run_command(
+                ["sudo", "rm", generator_instance.volume_path + "for_workload_generation*"], debug=False)
+
             command = ["sudo", "docker", "run", "-v",
                        generator_instance.volume_path + ":/tmp/fio-data",
                        "-e", "JOBFILES=" + generator_instance.fio_test_name, "clusterhq/fio-tool"]

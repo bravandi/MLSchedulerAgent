@@ -1,4 +1,4 @@
-#sudo docker run -v /home/centos/MLSchedulerAgent/fio/:/tmp/fio-data -e JOBFILES=resource_evaluation.fio clusterhq/fio-tool
+#sudo docker run -v /media/:/tmp/fio-data -e JOBFILES=resource_evaluation.fio clusterhq/fio-tool
 
 [global]
 #directory=
@@ -26,4 +26,4 @@ rwmixread=75
 rwmixwrite=25
 #rwmixread=75
 
-[resource_evaluation]
+[for_resource_evaluation]

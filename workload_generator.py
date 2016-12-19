@@ -998,19 +998,6 @@ class CinderWorkloadGenerator:
             # endregion
 
             time.sleep(1)
-        # except Exception as err:
-        #
-        #     tools.log(
-        #         app="MAIN_WORKGEN",
-        #         type="ERROR",
-        #         volume_cinder_id=volume_id,
-        #         code="simulation_failed",
-        #         file_name="workload_generator.py",
-        #         function_name="start_simulation",
-        #         message="simulation ended with an exception",
-        #         exception=err)
-
-        print("\n\n***************************************** died normally")
 
 
 if __name__ == "__main__":

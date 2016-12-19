@@ -1,10 +1,12 @@
+# sudo docker run -v /media/:/tmp/fio-data -e JOBFILES=wgen_sequential_read.fio clusterhq/fio-tool
+
 [global]
 randrepeat=1
 ioengine=libaio
 direct=1
 gtod_reduce=1
 bs=4k
-size=128m
+size=64m
 readwrite=read
 
-[sequential_read]
+[for_workload_generation]
