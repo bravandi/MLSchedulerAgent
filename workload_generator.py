@@ -1033,7 +1033,7 @@ class CinderWorkloadGenerator:
             message="simulation done")
 
         # insurance, the volumes shall be already detached at this point
-        self.detach_delete_all_volumes()
+        # self.detach_delete_all_volumes()
 
         print("\n\n***************************************** died normally")
 
