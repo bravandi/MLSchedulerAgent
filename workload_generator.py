@@ -47,7 +47,8 @@ class CinderWorkloadGenerator:
         )
 
         if communication_result == "connection-error":
-            raise Exception("Cannot start agent at this point. The Service Handler is not available and caannot register this tenant.")
+            raise Exception(
+                "Cannot start agent at this point. The Service Handler is not available and caannot register this tenant.")
 
         self.performance_evaluation_args = performance_evaluation_args
 
@@ -178,6 +179,9 @@ class CinderWorkloadGenerator:
             read_iops=read_iops,
             write_iops=write_iops
         )
+
+        if db_id == -100:
+            return "experiment-done"
 
         if db_id == "connection-error":
             tools.log(
@@ -615,8 +619,8 @@ class CinderWorkloadGenerator:
             cinder.volumes.delete(volume_id)
 
             if communication.delete_volume(
-                cinder_id=volume_id,
-                is_deleted=is_deleted) == "connection-error":
+                    cinder_id=volume_id,
+                    is_deleted=is_deleted) == "connection-error":
                 return False
 
             return True
@@ -732,6 +736,9 @@ class CinderWorkloadGenerator:
     def create_attach_mount_volume(self):
         volume = self.create_volume()
 
+        if volume == "experiment-done":
+            return None, volume
+
         if volume == 'server-incapable-create-vol':
             return None, volume
 
@@ -795,7 +802,7 @@ class CinderWorkloadGenerator:
 
         last_create_volume_time = None
         workload_generate_hold_create_new_volume_request = False
-
+        is_simulation_done = False
         # try:
 
         # never use continue in this loop, there are multiple independent tasks here
@@ -834,6 +841,10 @@ class CinderWorkloadGenerator:
                             workgen_volumes.remove(workload_gen)
             # endregion
 
+            if is_simulation_done is True and len(workgen_volumes) == 0 and len(self.delete_detach_volumes_list) == 0:
+
+                break
+
             # region <<<<<<<<<<<<<<<<<<<HOLD for REJECTION or VOLUME GENERATION GAP>>>>>>>>>>>>>>>>
             # hold requesting new volumes if one is rejected
             if rejection_hold_create_new_volume_request is True:
@@ -862,7 +873,8 @@ class CinderWorkloadGenerator:
             active_workgen_volumes = [workgen_volume for workgen_volume in workgen_volumes if
                                       workgen_volume["active"] is True]
 
-            if workload_generate_hold_create_new_volume_request is False and \
+            if is_simulation_done is False and \
+                            workload_generate_hold_create_new_volume_request is False and \
                             rejection_hold_create_new_volume_request is False and \
                             len(active_workgen_volumes) < int(
                         np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
@@ -871,6 +883,19 @@ class CinderWorkloadGenerator:
                 workload_generate_hold_create_new_volume_request = True
 
                 volume_id, result = self.create_attach_mount_volume()
+
+                if result == "experiment-done":
+                    is_simulation_done = True
+
+                    tools.log(
+                        app="MAIN_WORKGEN",
+                        type="INFO",
+                        code="finish_signal",
+                        file_name="workload_generator.py",
+                        function_name="start_simulation",
+                        message="received finish simulation signal")
+
+                    continue
 
                 if result == 'server-incapable-create-vol':
                     # TODO need to investigate how to mitigate this problem
@@ -999,6 +1024,19 @@ class CinderWorkloadGenerator:
 
             time.sleep(1)
 
+        tools.log(
+            app="MAIN_WORKGEN",
+            type="INFO",
+            code="finished_simulation",
+            file_name="workload_generator.py",
+            function_name="start_simulation",
+            message="simulation done")
+
+        # insurance, the volumes shall be already detached at this point
+        self.detach_delete_all_volumes()
+
+        print("\n\n***************************************** died normally")
+
 
 if __name__ == "__main__":
 
@@ -1126,5 +1164,3 @@ if __name__ == "__main__":
 
     elif "start" in args.commands:
         wg.start_simulation()
-
-    print("\n\n***************************************** died normally222")
