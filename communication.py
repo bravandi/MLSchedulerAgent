@@ -1,6 +1,7 @@
 import requests
 import json
 from datetime import datetime
+import tools
 import pdb
 
 __server_url = 'http://CinderDevelopmentEnv:8888/'
@@ -55,6 +56,15 @@ class Communication:
             return None
 
         Communication._current_experiment = ex
+
+        tools.log(
+            app="agent",
+            type="INFO2",
+            code="reload_experiment",
+            file_name="communication.py",
+            function_name="reload",
+            message="reload experiment"
+        )
 
 
 def volume_performance_meter_clock_calc(t=datetime.now()):
