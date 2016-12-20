@@ -1026,7 +1026,7 @@ class CinderWorkloadGenerator:
 
         tools.log(
             app="MAIN_WORKGEN",
-            type="INFO",
+            type="DONE",
             code="finished_simulation",
             file_name="workload_generator.py",
             function_name="start_simulation",
