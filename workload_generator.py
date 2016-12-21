@@ -803,7 +803,7 @@ class CinderWorkloadGenerator:
         last_create_volume_time = None
         workload_generate_hold_create_new_volume_request = False
         is_simulation_done = False
-        last_reload_time = datetime.now()
+        # last_reload_time = datetime.now()
         # try:
 
         # never use continue in this loop, there are multiple independent tasks here
@@ -844,9 +844,9 @@ class CinderWorkloadGenerator:
 
             if is_simulation_done is True and len(workgen_volumes) == 0 and len(self.delete_detach_volumes_list) == 0:
                 break
-            if tools.get_time_difference(last_reload_time) > 18:
-                communication.Communication.reload()
-                last_reload_time = datetime.now()
+            # if tools.get_time_difference(last_reload_time) > 18:
+                # communication.Communication.reload()
+                # last_reload_time = datetime.now()
 
             # region <<<<<<<<<<<<<<<<<<<HOLD for REJECTION or VOLUME GENERATION GAP>>>>>>>>>>>>>>>>
             # hold requesting new volumes if one is rejected
