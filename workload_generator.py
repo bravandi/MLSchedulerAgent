@@ -851,7 +851,8 @@ class CinderWorkloadGenerator:
             # region <<<<<<<<<<<<<<<<<<<HOLD for REJECTION or VOLUME GENERATION GAP>>>>>>>>>>>>>>>>
             # hold requesting new volumes if one is rejected
             if rejection_hold_create_new_volume_request is True:
-                rejection_hold_create_new_volume_request = False
+                #
+                # rejection_hold_create_new_volume_request = False
 
                 gap = int(
                     np.random.choice(self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1]))
