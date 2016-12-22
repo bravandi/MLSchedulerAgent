@@ -233,6 +233,39 @@ class CinderWorkloadGenerator:
             time.sleep(1)
             return None
 
+        is_status_available, message = tools.cinder_wait_for_volume_status(
+            volume.id,
+            status="available",
+            timeout=self.wait_volume_status_timeout)
+
+        if is_status_available is False:
+            #
+            log_code = ""
+            log_msg = ""
+
+            if message == "vol-status-error":
+                log_code = "rejected_OR_unknown_reason"
+                log_msg = "Reason: Assume volume is rejected. " \
+                          "'error' status could cause by rejecting the volume in the scheduler OR " \
+                          "OpenStack internal exceptions. I cannot distinguish between them (error, error creating ...)"
+
+            if message == "timeout":
+                log_code = "status_timeout_create_volume"
+                log_msg = "timeout, wait for status 'available'. waited for > " + str(self.wait_volume_status_timeout)
+
+            tools.log(
+                app="MAIN_WORKGEN",
+                type="WARNING",
+                code=log_code,
+                file_name="workload_generator.py",
+                function_name="create_volume",
+                message=log_msg
+            )
+
+            self._delete_volume(volume_id=volume.id, is_deleted=2, debug_call_from='create_volume')
+
+            return None
+
         return volume
 
     def attach_volume(self, instance_id, volume_id):
@@ -251,41 +284,10 @@ class CinderWorkloadGenerator:
         if msg == "fdisk-input-output-error":
             raise Exception("Err in executing fdisk -l Input/output. MAYBE need delete the VM")
 
-        is_status_available, message = tools.cinder_wait_for_volume_status(
-            volume_id,
-            status="available",
-            timeout=self.wait_volume_status_timeout)
-
-        if is_status_available is False:
-            #
-            log_code = ""
-            log_msg = ""
-
-            if message == "vol-status-error":
-                log_code = "rejected_OR_unknown_reason"
-                log_msg = "Reason: Assume volume is rejected. " \
-                          "'error' status could cause by rejecting the volume in the scheduler OR " \
-                          "OpenStack internal exceptions. I cannot distinguish between them (error, error creating ...)"
-
-            if message == "timeout":
-                log_code = "timeout_vol_status_wait"
-                log_msg = "timeout, wait for status 'available'. waited for > " + str(self.wait_volume_status_timeout)
-
-            tools.log(
-                app="MAIN_WORKGEN",
-                type="WARNING",
-                code=log_code,
-                file_name="workload_generator.py",
-                function_name="attach_volume",
-                message=log_msg,
-                volume_cinder_id=volume_id,
-            )
-
-            return None
-
         tools.log(
             app="MAIN_WORKGEN",
             type="INFO",
+            code="pre_attach_volume",
             file_name="workload_generator.py",
             function_name="attach_volume",
             message="Going to attach volume instance_id=%s volume_id=%s" % (instance_id, volume_id),
@@ -853,7 +855,6 @@ class CinderWorkloadGenerator:
             if rejection_hold_create_new_volume_request is True:
                 #
                 # rejection_hold_create_new_volume_request = False
-
                 gap = int(
                     np.random.choice(self.wait_after_volume_rejected[0], 1, p=self.wait_after_volume_rejected[1]))
 
@@ -924,7 +925,7 @@ class CinderWorkloadGenerator:
                     app="MAIN_WORKGEN",
                     type="INFO",
                     volume_cinder_id=volume_id,
-                    code="create_attach_vol_result",
+                    code=result + "create_attach_vol_result",
                     file_name="workload_generator.py",
                     function_name="create_attach_mount_volume",
                     message="CREATE_ATTACH RESULT: %s, %s" % (volume_id, result))
