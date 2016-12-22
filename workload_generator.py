@@ -861,6 +861,15 @@ class CinderWorkloadGenerator:
                     #
                     rejection_hold_create_new_volume_request = False
 
+                    tools.log(
+                        app="MAIN_WORKGEN",
+                        type="INFO2",
+                        code="hold_rejection_released",
+                        file_name="workload_generator.py",
+                        function_name="start_simulation",
+                        message="rejection hold released after: %s seconds" % str(gap)
+                    )
+
             # apply create volume generation gap
             if workload_generate_hold_create_new_volume_request is True:
                 #
