@@ -844,7 +844,7 @@ class CinderWorkloadGenerator:
 
             if is_simulation_done is True and len(workgen_volumes) == 0 and len(self.delete_detach_volumes_list) == 0:
                 break
-            # if tools.get_time_difference(last_reload_time) > 18:
+                # if tools.get_time_difference(last_reload_time) > 18:
                 # communication.Communication.reload()
                 # last_reload_time = datetime.now()
 
@@ -877,11 +877,16 @@ class CinderWorkloadGenerator:
             active_workgen_volumes = [workgen_volume for workgen_volume in workgen_volumes if
                                       workgen_volume["active"] is True]
 
+            max_vols_num = int(
+                np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1]))
+
             if is_simulation_done is False and \
                             workload_generate_hold_create_new_volume_request is False and \
-                            rejection_hold_create_new_volume_request is False and \
-                            len(active_workgen_volumes) < int(
-                        np.random.choice(self.max_number_volumes[0], 1, p=self.max_number_volumes[1])):
+                    (
+                            # max_vols_num - len(active_workgen_volumes) > 1 or
+                                rejection_hold_create_new_volume_request is False
+                    ) and \
+                            len(active_workgen_volumes) < max_vols_num:
 
                 last_create_volume_time = datetime.now()
                 workload_generate_hold_create_new_volume_request = True
