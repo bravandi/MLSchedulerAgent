@@ -1,0 +1,10 @@
+[global]
+ioengine=libaio
+direct=0
+bs=4k
+size=48m
+
+
+[workload_generation_random_rw]
+readwrite=randrw
+randrepeat=1

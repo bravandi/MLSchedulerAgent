@@ -14,6 +14,10 @@ function c_killProc(){
 	sudo ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 }
 
+function c_shutdown(){
+    sudo shutdown
+}
+
 function c_catErr(){
 	sudo find /home/centos -type f -name '*.err' -exec cat {} +
 }
