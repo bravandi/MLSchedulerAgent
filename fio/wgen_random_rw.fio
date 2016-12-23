@@ -2,7 +2,7 @@
 ioengine=libaio
 direct=0
 bs=4k
-size=48m
+size=128m
 
 
 [workload_generation_random_rw]

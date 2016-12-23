@@ -89,7 +89,6 @@ class StorageWorkloadGenerator:
         try:
 
             if os.path.isfile(test_path) is False:
-
                 copyfile(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, test_path)
 
                 # with open(StorageWorkloadGenerator.fio_tests_conf_path + fio_test_name, 'r') as myfile:
@@ -143,7 +142,31 @@ class StorageWorkloadGenerator:
         command = None
 
         try:
+            command = ["sudo", "rm", generator_instance.volume_path + 'workload_generation*']
+            out, err, p = tools.run_command(command)
+            tools.log(
+                app="STORAGE_GEN",
+                type="INFO",
+                code="rm_wgen_layout_file",
+                file_name="workload_generator.py",
+                function_name="run_workload_generator",
+                message="%s @@ out: %s" % (" ".join(command), out),
+                volume_cinder_id=generator_instance.volume_id,
+                exception=err)
 
+        except Exception as err_ex:
+            tools.log(
+                app="STORAGE_GEN",
+                type="ERROR",
+                code="rm_failed_wgen_layout_file",
+                file_name="workload_generator.py",
+                function_name="run_workload_generator",
+                message="rm failed wgen layout file. command: %s out: %s err: %s"
+                        % (" ".join(command), out, err),
+                volume_cinder_id=generator_instance.volume_id,
+                exception=str(err_ex))
+
+        try:
             out, err, p = tools.run_command(
                 ["sudo", "rm", generator_instance.volume_path + "for_workload_generation*"], debug=False)
 

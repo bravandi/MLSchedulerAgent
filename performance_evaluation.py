@@ -112,6 +112,31 @@ class PerformanceEvaluationFIOTest:
         command = None
 
         try:
+            command = ["sudo", "rm", test_instance.volume_path + 'for_resource*']
+            out, err, p = tools.run_command(command)
+            tools.log(
+                app="PERF_EVAL",
+                type="INFO",
+                code="rm_perf_layout_file",
+                file_name="performance_evaluation.py",
+                function_name="run_f_test",
+                message="%s @@ out: %s" % (" ".join(command), out),
+                volume_cinder_id=test_instance.cinder_volume_id,
+                exception=err)
+
+        except Exception as err_ex:
+            tools.log(
+                app="PERF_EVAL",
+                type="ERROR",
+                code="rm_failed_perf_layout_file",
+                file_name="performance_evaluation.py",
+                function_name="run_f_test",
+                message="rm failed perf eval layout file. command: %s out: %s err: %s"
+                        % (" ".join(command), out, err),
+                volume_cinder_id=test_instance.cinder_volume_id,
+                exception=str(err_ex))
+
+        try:
             out, err, p = tools.run_command(
                 ["sudo", "rm", test_instance.volume_path + "for_resource_evaluation*"], debug=False)
 

@@ -4,10 +4,10 @@
 ioengine=libaio
 direct=0
 bs=4k
-size=32m
+size=40m
 
 [for_resource_evaluation]
 randrepeat=1
 readwrite=randrw
-rwmixread=75
-rwmixwrite=25
+rwmixread=70
+rwmixwrite=30
