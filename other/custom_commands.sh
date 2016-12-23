@@ -39,22 +39,9 @@ function c_delMedia(){
 	 sudo rm -r -d /media/*
 }
 
-function c_killPerformanceEvaluation(){
-	sudo ps -ef | grep performance_evaluation | grep -v grep | awk '{print $2}' | xargs sudo kill -9
-}
-
 function c_killWorkloadGenerator(){
 	sudo ps -ef | grep workload_generator | grep -v grep | awk '{print $2}' | xargs sudo kill -9
 	sudo ps -ef | grep workload_runner | grep -v grep | awk '{print $2}' | xargs sudo kill -9
-}
-
-function c_showPerfWork(){
-    sudo echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    sudo ps aux | grep workload_generator.py
-    sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-    sudo ps aux | grep performance_evaluation.py
-    sudo echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-    sudo ps aux | grep workload_runner.py
 }
 
 function cp_run(){
@@ -80,20 +67,9 @@ function c_getWorkloadGenerator(){
 	sudo ps aux | grep workload_generator
 }
 
-function c_getPerformanceEvaluation(){
-	sudo ps aux | grep performance_evaluation
-}
-
 function c_source(){
-# todo fix this
-	source ~/MLSchedulerAgent/other/custom_commands.sh
+	source /home/centos/MLSchedulerAgent/other/custom_commands.sh
 }
-
-#function c_runPerformanceEvaluation(){
-#    cv_cmd="sudo python ~/MLSchedulerAgent/performance_evaluation.py"
-#
-#	cp_run "$cv_cmd" $1
-#}
 
 function cp_print(){
     printf "	$1 ${RED} $2 ${NC}\n"
