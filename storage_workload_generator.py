@@ -252,7 +252,7 @@ class StorageWorkloadGenerator:
 
         tools.log(
             app="STORAGE_GEN",
-            type="INFO2",
+            type="INFO",
             code="iops_wgen",
             file_name="workload_generator.py",
             function_name="run_workload_generator",

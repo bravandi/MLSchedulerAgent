@@ -228,7 +228,7 @@ class PerformanceEvaluationFIOTest:
 
         tools.log(
             app="PERF_EVAL",
-            type="INFO2",
+            type="INFO",
             volume_cinder_id=test_instance.cinder_volume_id,
             code="iops_perf",
             file_name="performance_evaluation.py",
