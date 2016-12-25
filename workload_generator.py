@@ -770,6 +770,16 @@ class CinderWorkloadGenerator:
                 volume=volume)
 
             if mount_result is False:
+                tools.log(
+                    app="MAIN_WORKGEN",
+                    type="ERROR",
+                    code="attach_failed_mount_failed_2",
+                    file_name="workload_generator.py",
+                    function_name="create_attach_volume",
+                    message="going to mount volume",
+                    volume_cinder_id=volume.id
+                )
+
                 return volume.id, "mount-failed-2"
         else:
             return volume.id, "attach-failed"
