@@ -78,7 +78,8 @@ class PerformanceEvaluationFIOTest:
 
             tools.log(
                 app="PERF_EVAL",
-                type="WARNING",
+                #type="WARNING",
+                type="ERROR",
                 volume_cinder_id=self.cinder_volume_id,
                 code="terminate_time_out",
                 file_name="performance_evaluation.py",

@@ -255,7 +255,7 @@ class CinderWorkloadGenerator:
 
             tools.log(
                 app="MAIN_WORKGEN",
-                type="WARNING",
+                type="ERROR",
                 code=log_code,
                 file_name="workload_generator.py",
                 function_name="create_volume",
@@ -400,7 +400,7 @@ class CinderWorkloadGenerator:
             tools.log(
                 app="MAIN_WORKGEN",
                 volume_cinder_id=volume.id,
-                type="WARNING",
+                type="ERROR",
                 code="device_find_timeout",
                 file_name="workload_generator.py",
                 function_name="mount_volume",
@@ -652,7 +652,8 @@ class CinderWorkloadGenerator:
             if "No volume with a name or ID of" in str(err) or "could not be found" in str(err):
                 tools.log(
                     app="MAIN_WORKGEN",
-                    type="WARNING",
+                    type="ERROR",
+                    #type="WARNING",
                     volume_cinder_id=volume_id,
                     code="cinder_del_general_fail",
                     file_name="workload_generator.py",
@@ -664,6 +665,15 @@ class CinderWorkloadGenerator:
 
         # try to delete later. if is_delete = 2, then means volume wont be counted in reports
         if self.delete_detach_volumes_list.has_key(volume_id) is False:
+            tools.log(
+                app="MAIN_WORKGEN",
+                type="ERROR",
+                volume_cinder_id=volume_id,
+                code="del_vol_code2_from_delete",
+                file_name="workload_generator.py",
+                function_name="_delete_volume",
+                message="")
+
             self.delete_detach_volumes_list[volume_id] = is_deleted
 
         return False
@@ -937,7 +947,7 @@ class CinderWorkloadGenerator:
                     volume_cinder_id=volume_id,
                     code=result + "create_attach_vol_result",
                     file_name="workload_generator.py",
-                    function_name="create_attach_mount_volume",
+                    function_name="start_simulation",
                     message="CREATE_ATTACH RESULT: %s, %s" % (volume_id, result))
 
                 if volume_id is None or result == "failed":
@@ -946,6 +956,14 @@ class CinderWorkloadGenerator:
                     rejection_hold_create_new_volume_request = True
 
                 elif result == "mount-failed-2" or result == "attach-failed":
+                    tools.log(
+                        app="MAIN_WORKGEN",
+                        type="ERROR",
+                        volume_cinder_id=volume_id,
+                        code="del_vol_code2_mount_result:" + result,
+                        file_name="workload_generator.py",
+                        function_name="start_simulation",
+                        message="set a bad volume")
 
                     self.delete_detach_volumes_list[volume_id] = 2
 
@@ -1004,6 +1022,16 @@ class CinderWorkloadGenerator:
                     if perf_test.initialize() == 'failed-copy-perf-eval-fio-test-file':
 
                         # if failed to finish one time initialize then do not consider it in the reports
+
+                        tools.log(
+                            app="MAIN_WORKGEN",
+                            type="ERROR",
+                            volume_cinder_id=volume_id,
+                            code="del_vol_code2_copy_perf_eval",
+                            file_name="workload_generator.py",
+                            function_name="start_simulation",
+                            message="")
+
                         if self.delete_detach_volumes_list.has_key(volume_id) is False:
                             self.delete_detach_volumes_list[volume_id] = 2
                         workgen_volume["active"] = False
