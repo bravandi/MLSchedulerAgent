@@ -665,14 +665,15 @@ class CinderWorkloadGenerator:
 
         # try to delete later. if is_delete = 2, then means volume wont be counted in reports
         if self.delete_detach_volumes_list.has_key(volume_id) is False:
-            tools.log(
-                app="MAIN_WORKGEN",
-                type="ERROR",
-                volume_cinder_id=volume_id,
-                code="del_vol_code2_from_delete",
-                file_name="workload_generator.py",
-                function_name="_delete_volume",
-                message="")
+            if is_deleted == 2:
+                tools.log(
+                    app="MAIN_WORKGEN",
+                    type="ERROR",
+                    volume_cinder_id=volume_id,
+                    code="del_vol_code2_from_delete",
+                    file_name="workload_generator.py",
+                    function_name="_delete_volume",
+                    message="")
 
             self.delete_detach_volumes_list[volume_id] = is_deleted
 
