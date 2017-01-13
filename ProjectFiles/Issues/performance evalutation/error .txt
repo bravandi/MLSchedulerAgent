@@ -1,0 +1,29 @@
+Traceback (most recent call last):
+  File "/home/ubuntu/MLSchedulerAgent/performance_evaluation.py", line 283, in <module>
+    p.run_fio_test()
+  File "/home/ubuntu/MLSchedulerAgent/performance_evaluation.py", line 234, in run_fio_test
+    test_name=self.fio_test_name)
+  File "/home/ubuntu/MLSchedulerAgent/performance_evaluation.py", line 171, in fio_test
+    difference = tools.get_time_difference(f_test.get_last_start_time())
+  File "/home/ubuntu/MLSchedulerAgent/performance_evaluation.py", line 40, in get_last_start_time
+    return tools.convert_string_datetime(self.last_start_time.value)
+  File "/home/ubuntu/MLSchedulerAgent/tools.py", line 306, in convert_string_datetime
+    return datetime.strptime(input, "%Y-%m-%d %H:%M:%S.%f")
+  File "/usr/lib/python2.7/_strptime.py", line 332, in _strptime
+    (data_string, format))
+ValueError: time data '2016-11-21 15:07:29' does not match format '%Y-%m-%d %H:%M:%S.%f'
+Process Process-56:
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/usr/lib/python2.7/multiprocessing/process.py", line 114, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/MLSchedulerAgent/performance_evaluation.py", line 98, in run_f_test
+    duration = tools.get_time_difference(last_start_time.value, last_end_time.value)
+  File "/home/ubuntu/MLSchedulerAgent/tools.py", line 151, in get_time_difference
+    start_time = convert_string_datetime(start_time)
+  File "/home/ubuntu/MLSchedulerAgent/tools.py", line 306, in convert_string_datetime
+    return datetime.strptime(input, "%Y-%m-%d %H:%M:%S.%f")
+  File "/usr/lib/python2.7/_strptime.py", line 332, in _strptime
+    (data_string, format))
+ValueError: time data '2016-11-21 15:07:29' does not match format '%Y-%m-%d %H:%M:%S.%f'

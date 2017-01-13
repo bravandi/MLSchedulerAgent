@@ -1,0 +1,14 @@
+SOURCE is block 5 DESTINATION is block 2
+
+Bsed on:
+
+	2016-11-11 09:43:20.444 1455 INFO os_brick.initiator.connector [req-3100f5e0-5f92-462c-8fa1-5c71af02586f 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Multipath discovery for iSCSI not enabled.
+	2016-11-11 09:43:20.446 1455 INFO os_brick.initiator.connector [req-3100f5e0-5f92-462c-8fa1-5c71af02586f 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Trying to connect to iSCSI portal 10.18.75.62:3260
+
+		Some times this line does not happen
+	2016-11-11 09:43:22.372 1455 WARNING os_brick.initiator.connector [req-3100f5e0-5f92-462c-8fa1-5c71af02586f 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] ISCSI volume not yet found at: [u'/dev/disk/by-path/ip-10.18.75.62:3260-iscsi-iqn.2010-10.org.openstack:volume-6b5a833f-55ca-4ecc-8df8-5c0c2dadc6d7-lun-1']. Will rescan & retry.  Try number: 0.
+
+I installed multipath-tools on block 2 (destination) but didnt investigate further I am tired of this
+	
+https://help.ubuntu.com/lts/serverguide/multipath-setting-up-dm-multipath.html
+apt install multipath-tools

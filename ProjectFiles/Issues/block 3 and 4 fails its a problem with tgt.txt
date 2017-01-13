@@ -1,0 +1,135 @@
+
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher [req-4b1d6897-8f37-4d13-8261-7e39c0073d79 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Exception during message handling: Unexpected error while running command.
+Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+Exit code: 107
+Stdout: u''
+Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n'
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher Traceback (most recent call last):
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     incoming.message))
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     return self._do_dispatch(endpoint, method, ctxt, args)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     result = func(ctxt, **new_args)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/manager.py", line 1441, in initialize_connection
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     volume, connector)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/drivers/lvm.py", line 760, in create_export
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     volume_path)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/iscsi.py", line 210, in create_export
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     **portals_config)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/tgt.py", line 140, in create_iscsi_target
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     run_as_root=True)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/utils.py", line 148, in execute
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     return processutils.execute(*cmd, **kwargs)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py", line 371, in execute
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher     cmd=sanitized_cmd)
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher ProcessExecutionError: Unexpected error while running command.
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher Exit code: 107
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher Stdout: u''
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n'
+2016-12-14 20:39:27.649 31434 ERROR oslo_messaging.rpc.dispatcher 
+2016-12-14 20:39:27.654 31434 ERROR oslo_messaging._drivers.common [req-4b1d6897-8f37-4d13-8261-7e39c0073d79 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Returning exception Unexpected error while running command.
+Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+Exit code: 107
+Stdout: u''
+Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n' to caller
+2016-12-14 20:39:27.654 31434 ERROR oslo_messaging._drivers.common [req-4b1d6897-8f37-4d13-8261-7e39c0073d79 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] ['Traceback (most recent call last):\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply\n    incoming.message))\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch\n    return self._do_dispatch(endpoint, method, ctxt, args)\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch\n    result = func(ctxt, **new_args)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/manager.py", line 1441, in initialize_connection\n    volume, connector)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/drivers/lvm.py", line 760, in create_export\n    volume_path)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/iscsi.py", line 210, in create_export\n    **portals_config)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/tgt.py", line 140, in create_iscsi_target\n    run_as_root=True)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/utils.py", line 148, in execute\n    return processutils.execute(*cmd, **kwargs)\n', '  File "/usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py", line 371, in execute\n    cmd=sanitized_cmd)\n', "ProcessExecutionError: Unexpected error while running command.\nCommand: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target\nExit code: 107\nStdout: u''\nStderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\\n'\n"]
+2016-12-14 20:39:27.655 31434 DEBUG oslo_messaging._drivers.amqpdriver [req-4b1d6897-8f37-4d13-8261-7e39c0073d79 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] sending reply msg_id: 05d30e45f34e4d3bbc2452f2d9ff724f reply queue: reply_406c574fc7ef47378b6a3a0bbff91509 time elapsed: 0.230821553003s _send_reply /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:74
+2016-12-14 20:39:27.659 31434 INFO cinder.volume.flows.manager.create_volume [req-2c023029-6df1-4601-a4ee-4574a864e825 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Volume volume-c5d92d73-6ad5-44e8-8b25-bbb0aa7e8b53 (c5d92d73-6ad5-44e8-8b25-bbb0aa7e8b53): created successfully
+2016-12-14 20:39:27.661 31434 DEBUG cinder.volume.manager [req-2c023029-6df1-4601-a4ee-4574a864e825 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Task 'cinder.volume.flows.manager.create_volume.CreateVolumeOnFinishTask;volume:create, create.end' (cc0f71df-48f6-4046-9b81-90f752408572) transitioned into state 'SUCCESS' from state 'RUNNING' with result 'None' _task_receiver /usr/lib/python2.7/dist-packages/taskflow/listeners/logging.py:178
+2016-12-14 20:39:27.664 31434 DEBUG cinder.volume.manager [req-2c023029-6df1-4601-a4ee-4574a864e825 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Flow 'volume_create_manager' (9a6c3879-8d2e-43f1-84ec-76f0c901f641) transitioned into state 'SUCCESS' from state 'RUNNING' _flow_receiver /usr/lib/python2.7/dist-packages/taskflow/listeners/logging.py:140
+2016-12-14 20:39:27.665 31434 INFO cinder.volume.manager [req-2c023029-6df1-4601-a4ee-4574a864e825 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Created volume successfully.
+2016-12-14 20:39:27.748 31434 DEBUG oslo_messaging._drivers.amqpdriver [-] received message msg_id: 1d17450067b944db9a34242499e22dff reply to reply_406c574fc7ef47378b6a3a0bbff91509 __call__ /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:201
+2016-12-14 20:39:27.793 31434 INFO cinder.volume.manager [req-377098ac-ed2b-4a9b-84b7-1160f46252ab 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Terminate volume connection completed successfully.
+2016-12-14 20:39:27.794 31434 DEBUG oslo_messaging._drivers.amqpdriver [req-377098ac-ed2b-4a9b-84b7-1160f46252ab 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] sending reply msg_id: 1d17450067b944db9a34242499e22dff reply queue: reply_406c574fc7ef47378b6a3a0bbff91509 time elapsed: 0.045361405002s _send_reply /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:74
+2016-12-14 20:39:28.795 31434 DEBUG oslo_messaging._drivers.amqpdriver [-] received message msg_id: 895a48efc1fe4eb6800fa55939d56388 reply to reply_bc8cd17102d944e8b2f5fa71532a52d4 __call__ /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:201
+2016-12-14 20:39:28.926 31434 DEBUG oslo_concurrency.processutils [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Running cmd (subprocess): sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target execute /usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py:326
+2016-12-14 20:39:29.017 31434 DEBUG oslo_messaging._drivers.amqpdriver [-] received message msg_id: 877cc1a4b77c43c1b4598c6d7f97b9bc reply to reply_bc8cd17102d944e8b2f5fa71532a52d4 __call__ /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:201
+2016-12-14 20:39:29.048 31434 DEBUG oslo_concurrency.processutils [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] CMD "sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target" returned: 107 in 0.123s execute /usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py:356
+2016-12-14 20:39:29.049 31434 DEBUG oslo_concurrency.processutils [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] u'sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target' failed. Not Retrying. execute /usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py:404
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Exception during message handling: Unexpected error while running command.
+Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+Exit code: 107
+Stdout: u''
+Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n'
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher Traceback (most recent call last):
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     incoming.message))
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     return self._do_dispatch(endpoint, method, ctxt, args)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     result = func(ctxt, **new_args)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/manager.py", line 1441, in initialize_connection
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     volume, connector)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/drivers/lvm.py", line 760, in create_export
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     volume_path)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/iscsi.py", line 210, in create_export
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     **portals_config)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/tgt.py", line 140, in create_iscsi_target
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     run_as_root=True)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/utils.py", line 148, in execute
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     return processutils.execute(*cmd, **kwargs)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py", line 371, in execute
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher     cmd=sanitized_cmd)
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher ProcessExecutionError: Unexpected error while running command.
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher Exit code: 107
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher Stdout: u''
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n'
+2016-12-14 20:39:29.050 31434 ERROR oslo_messaging.rpc.dispatcher 
+2016-12-14 20:39:29.055 31434 ERROR oslo_messaging._drivers.common [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Returning exception Unexpected error while running command.
+Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+Exit code: 107
+Stdout: u''
+
+
+Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n' to caller
+2016-12-14 20:39:29.055 31434 ERROR oslo_messaging._drivers.common [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] ['Traceback (most recent call last):\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply\n    incoming.message))\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch\n    return self._do_dispatch(endpoint, method, ctxt, args)\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch\n    result = func(ctxt, **new_args)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/manager.py", line 1441, in initialize_connection\n    volume, connector)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/drivers/lvm.py", line 760, in create_export\n    volume_path)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/iscsi.py", line 210, in create_export\n    **portals_config)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/tgt.py", line 140, in create_iscsi_target\n    run_as_root=True)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/utils.py", line 148, in execute\n    return processutils.execute(*cmd, **kwargs)\n', '  File "/usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py", line 371, in execute\n    cmd=sanitized_cmd)\n', "ProcessExecutionError: Unexpected error while running command.\nCommand: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target\nExit code: 107\nStdout: u''\nStderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\\n'\n"]
+
+
+2016-12-14 20:39:29.056 31434 DEBUG oslo_messaging._drivers.amqpdriver [req-da978fe1-fd28-428d-80e4-6a8794613b89 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] sending reply msg_id: 895a48efc1fe4eb6800fa55939d56388 reply queue: reply_bc8cd17102d944e8b2f5fa71532a52d4 time elapsed: 0.260361834s _send_reply /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:74
+2016-12-14 20:39:29.140 31434 DEBUG oslo_concurrency.processutils [req-4a32b43f-70ff-4be2-b4c5-fa4ca8aac20e 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Running cmd (subprocess): sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target execute /usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py:326
+2016-12-14 20:39:29.158 31434 DEBUG oslo_messaging._drivers.amqpdriver [-] received message msg_id: 07d66a1c6a4b4104822f36849e0b7ff5 reply to reply_bc8cd17102d944e8b2f5fa71532a52d4 __call__ /usr/lib/python2.7/dist-packages/oslo_messaging/_drivers/amqpdriver.py:201
+2016-12-14 20:39:29.285 31434 DEBUG oslo_concurrency.processutils [req-4a32b43f-70ff-4be2-b4c5-fa4ca8aac20e 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] CMD "sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target" returned: 107 in 0.146s execute /usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py:356
+2016-12-14 20:39:29.286 31434 DEBUG oslo_concurrency.processutils [req-4a32b43f-70ff-4be2-b4c5-fa4ca8aac20e 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] u'sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target' failed. Not Retrying. execute /usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py:404
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher [req-4a32b43f-70ff-4be2-b4c5-fa4ca8aac20e 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Exception during message handling: Unexpected error while running command.
+Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+Exit code: 107
+Stdout: u''
+Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n'
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher Traceback (most recent call last):
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     incoming.message))
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     return self._do_dispatch(endpoint, method, ctxt, args)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     result = func(ctxt, **new_args)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/manager.py", line 1441, in initialize_connection
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     volume, connector)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/drivers/lvm.py", line 760, in create_export
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     volume_path)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/iscsi.py", line 210, in create_export
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     **portals_config)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/tgt.py", line 140, in create_iscsi_target
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     run_as_root=True)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/cinder/utils.py", line 148, in execute
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     return processutils.execute(*cmd, **kwargs)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py", line 371, in execute
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher     cmd=sanitized_cmd)
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher ProcessExecutionError: Unexpected error while running command.
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher Exit code: 107
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher Stdout: u''
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n'
+2016-12-14 20:39:29.295 31434 ERROR oslo_messaging.rpc.dispatcher 
+2016-12-14 20:39:29.300 31434 ERROR oslo_messaging._drivers.common [req-4a32b43f-70ff-4be2-b4c5-fa4ca8aac20e 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Returning exception Unexpected error while running command.
+Command: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target
+Exit code: 107
+Stdout: u''
+Stderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\n' to caller
+2016-12-14 20:39:29.300 31434 ERROR oslo_messaging._drivers.common [req-4a32b43f-70ff-4be2-b4c5-fa4ca8aac20e 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] ['Traceback (most recent call last):\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply\n    incoming.message))\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch\n    return self._do_dispatch(endpoint, method, ctxt, args)\n', '  File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch\n    result = func(ctxt, **new_args)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/manager.py", line 1441, in initialize_connection\n    volume, connector)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/drivers/lvm.py", line 760, in create_export\n    volume_path)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/iscsi.py", line 210, in create_export\n    **portals_config)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/volume/targets/tgt.py", line 140, in create_iscsi_target\n    run_as_root=True)\n', '  File "/usr/lib/python2.7/dist-packages/cinder/utils.py", line 148, in execute\n    return processutils.execute(*cmd, **kwargs)\n', '  File "/usr/lib/python2.7/dist-packages/oslo_concurrency/processutils.py", line 371, in execute\n    cmd=sanitized_cmd)\n', "ProcessExecutionError: Unexpected error while running command.\nCommand: sudo cinder-rootwrap /etc/cinder/rootwrap.conf tgtadm --lld iscsi --op show --mode target\nExit code: 107\nStdout: u''\nStderr: u'tgtadm: failed to send request hdr to tgt daemon, Transport endpoint is not connected\\n'\n"]
+
+
+
+

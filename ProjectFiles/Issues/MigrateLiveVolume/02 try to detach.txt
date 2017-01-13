@@ -1,0 +1,82 @@
+SOURCE is block 5 DESTINATION is block 2
+
+2016-11-11 09:47:04.423 1455 INFO nova.compute.manager [req-7c358d6d-2c52-4b99-8050-8a16b9f3216c 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26] Detach volume 61a92987-9b37-4322-8c12-e83063e8e938 from mountpoint /dev/vdb
+
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [req-7c358d6d-2c52-4b99-8050-8a16b9f3216c 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26] Failed to detach volume 61a92987-9b37-4322-8c12-e83063e8e938 from /dev/vdb
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26] Traceback (most recent call last):
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 4775, in _driver_detach_volume
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     encryption=encryption)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/nova/virt/libvirt/driver.py", line 1459, in detach_volume
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     live=live)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/nova/virt/libvirt/guest.py", line 327, in detach_device_with_retry
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     self.detach_device(conf, persistent, live)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/nova/virt/libvirt/guest.py", line 357, in detach_device
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 186, in doit
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     result = proxy_call(self._autowrap, f, *args, **kwargs)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 144, in proxy_call
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     rv = execute(f, *args, **kwargs)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 125, in execute
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     six.reraise(c, e, tb)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 83, in tworker
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     rv = meth(*args, **kwargs)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]   File "/usr/lib/python2.7/dist-packages/libvirt.py", line 1190, in detachDeviceFlags
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26]     if ret == -1: raise libvirtError ('virDomainDetachDeviceFlags() failed', dom=self)
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26] libvirtError: Requested operation is not valid: transient domains do not have any persistent config
+2016-11-11 09:47:04.427 1455 ERROR nova.compute.manager [instance: 38b4d2ba-7421-4c00-9d0a-ad84137eee26] 
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher [req-7c358d6d-2c52-4b99-8050-8a16b9f3216c 275716005ea14ce8a8e1c4a7c05c6ccc 666da5edb7dd4ac1a642a1fdd0f0f8f0 - - -] Exception during message handling: Requested operation is not valid: transient domains do not have any persistent config
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher Traceback (most recent call last):
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 138, in _dispatch_and_reply
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     incoming.message))
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 185, in _dispatch
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     return self._do_dispatch(endpoint, method, ctxt, args)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_messaging/rpc/dispatcher.py", line 127, in _do_dispatch
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     result = func(ctxt, **new_args)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/exception.py", line 110, in wrapped
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     payload)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_utils/excutils.py", line 220, in __exit__
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     self.force_reraise()
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_utils/excutils.py", line 196, in force_reraise
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     six.reraise(self.type_, self.value, self.tb)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/exception.py", line 89, in wrapped
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     return f(self, context, *args, **kw)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 387, in decorated_function
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     kwargs['instance'], e, sys.exc_info())
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_utils/excutils.py", line 220, in __exit__
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     self.force_reraise()
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_utils/excutils.py", line 196, in force_reraise
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     six.reraise(self.type_, self.value, self.tb)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 375, in decorated_function
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     return function(self, context, *args, **kwargs)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 4892, in detach_volume
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     attachment_id=attachment_id)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 4835, in _detach_volume
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     connection_info = self._driver_detach_volume(context, instance, bdm)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 4787, in _driver_detach_volume
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     self.volume_api.roll_detaching(context, volume_id)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_utils/excutils.py", line 220, in __exit__
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     self.force_reraise()
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/oslo_utils/excutils.py", line 196, in force_reraise
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     six.reraise(self.type_, self.value, self.tb)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/compute/manager.py", line 4775, in _driver_detach_volume
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     encryption=encryption)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/virt/libvirt/driver.py", line 1459, in detach_volume
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     live=live)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/virt/libvirt/guest.py", line 327, in detach_device_with_retry
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     self.detach_device(conf, persistent, live)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/nova/virt/libvirt/guest.py", line 357, in detach_device
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 186, in doit
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     result = proxy_call(self._autowrap, f, *args, **kwargs)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 144, in proxy_call
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     rv = execute(f, *args, **kwargs)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 125, in execute
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     six.reraise(c, e, tb)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/eventlet/tpool.py", line 83, in tworker
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     rv = meth(*args, **kwargs)
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher   File "/usr/lib/python2.7/dist-packages/libvirt.py", line 1190, in detachDeviceFlags
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher     if ret == -1: raise libvirtError ('virDomainDetachDeviceFlags() failed', dom=self)
+
+
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher libvirtError: Requested operation is not valid: transient domains do not have any persistent config
+2016-11-11 09:47:04.493 1455 ERROR oslo_messaging.rpc.dispatcher 

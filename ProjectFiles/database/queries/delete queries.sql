@@ -1,0 +1,21 @@
+Delete from volume_performance_meter where id > 0;
+delete from volume where id >0;
+Delete from schedule_response where id > 0;
+Delete from volume_request where id > 0;
+delete from workload_generator where id > 0 ;
+delete from backend where id >0;
+delete from tenant where id >0;
+delete from log where id > -1;
+delete from experiment where id > -1;
+delete from workload where id > -1;
+
+ALTER TABLE volume_performance_meter AUTO_INCREMENT = 1;
+ALTER TABLE volume AUTO_INCREMENT = 1;
+ALTER TABLE schedule_response AUTO_INCREMENT = 1;
+ALTER TABLE volume_request AUTO_INCREMENT = 1;
+ALTER TABLE workload_generator AUTO_INCREMENT = 1;
+ALTER TABLE backend AUTO_INCREMENT = 1;
+ALTER TABLE tenant AUTO_INCREMENT = 1;
+ALTER TABLE experiment AUTO_INCREMENT = 1;
+ALTER TABLE workload AUTO_INCREMENT = 1;
+ALTER TABLE log AUTO_INCREMENT = 1;
